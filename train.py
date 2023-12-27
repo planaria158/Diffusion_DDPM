@@ -14,10 +14,17 @@ from diffusion_lightning import DDPM
 #--------------------------------------------------------------------
 # Dataset, Dataloader
 #--------------------------------------------------------------------
+#--------------------------------------------------------------------
+# Dataset, Dataloader
+#--------------------------------------------------------------------
 from pathlib import Path
-image_dir_train = Path('../data/img_align_celeba/img_align_celeba/')
+image_dir_train = Path('../data/img_align_celeba/img_align_celeba/train/')
+image_dir_valid = Path('../data/img_align_celeba/img_align_celeba/valid/')
+
 img_size = (64,64) 
 batch_size = 12
+
+
 train_transforms = Compose([ToDtype(torch.float32, scale=False),
                             RandomHorizontalFlip(p=0.50),
                             # RandomVerticalFlip(p=0.25),
@@ -28,8 +35,15 @@ train_transforms = Compose([ToDtype(torch.float32, scale=False),
                             Resize(img_size, antialias=True)
                             ])
 
+valid_transforms = Compose([ToDtype(torch.float32, scale=False),
+                            Resize(img_size, antialias=True)
+                            ])
+
 train_dataset = CelebA(image_dir_train, transform=train_transforms)
 train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle = True, num_workers=5, persistent_workers=True)
+
+valid_dataset = CelebA(image_dir_valid, transform=valid_transforms)
+valid_loader = utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle = False, num_workers=5, persistent_workers=True)
 
 #--------------------------------------------------------------------
 # Lightning module
@@ -56,7 +70,7 @@ logger = TensorBoardLogger(save_dir=os.getcwd(), name="lightning_logs", default_
 trainer = pl.Trainer(accelerator='gpu', devices=1, max_epochs=500,
                      logger=logger, log_every_n_steps=1000, callbacks=[checkpoint_callback]) 
 
-trainer.fit(model=model, train_dataloaders=train_loader) 
+trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader) 
 
 
 

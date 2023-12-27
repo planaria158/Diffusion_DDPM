@@ -40,30 +40,36 @@ class DDPM(LightningModule):
     def forward(self, noisy_im, t):
         return self.model(noisy_im, t)
     
-    # ---------------------------------------------------------------
-    # Training step:
-    # we will run it with manual training (not automatic)
-    # ---------------------------------------------------------------
-    def training_step(self, batch, batch_idx):
-        im = batch[0]
-
-        # Sample random noise
-        noise = torch.randn_like(im) 
-        
-        # Sample timestep
-        t = torch.randint(0, self.num_timesteps, (im.shape[0],)) 
-
+    def common_forward(self, batch):
+        imgs = batch[0]
+        # Random noise
+        noise = torch.randn_like(imgs) 
+        # Timestep
+        tstep = torch.randint(0, self.num_timesteps, (imgs.shape[0],)) 
         # Add noise to images according to timestep
-        noisy_im = self.scheduler.add_noise(im, noise, t).to(im)
-
+        noisy_imgs = self.scheduler.add_noise(imgs, noise, tstep).to(imgs)
         # Model tries to learn the noise that was added to im to make noise_im
-        noise_pred = self.forward(noisy_im, t.to(im))
-
+        noise_pred = self.forward(noisy_imgs, tstep.to(imgs))
         # Loss is our predicted noise relative to actual noise
         loss = self.criterion(noise_pred, noise)
-
+        return loss
+    
+    # ---------------------------------------------------------------
+    # Training step:
+    # ---------------------------------------------------------------
+    def training_step(self, batch, batch_idx):
+        loss = self.common_forward(batch)
         self.log_dict({"loss": loss}, prog_bar=True, sync_dist=True)
         return loss
+
+    # ---------------------------------------------------------------
+    # Validation step:
+    # ---------------------------------------------------------------
+    def validation_step(self, batch, batch_idx):
+        val_loss = self.common_forward(batch)
+        self.log_dict({"val_loss": val_loss}, prog_bar=True, sync_dist=True)
+        return val_loss
+    
 
     def configure_optimizers(self):
         lr = 0.00002  # was 0.0002
