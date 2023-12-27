@@ -112,7 +112,7 @@ class DownBlock(nn.Module):
         out = self.residual_block_2(x, t_emb)
         out = self.conv(out)
         out = self.down_sample_conv(out)
-        return F.silu(out)
+        return out
 
 
 class MidBlock(nn.Module):
@@ -140,7 +140,7 @@ class MidBlock(nn.Module):
 
         out = self.residual_block_2(out, t_emb)        
         out = self.conv(out)
-        return F.silu(out)
+        return out
 
 
 class UpBlock(nn.Module):
@@ -158,8 +158,8 @@ class UpBlock(nn.Module):
         self.up_sample_conv = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=4, stride=2, padding=1)
         self.residual_block_1 = ResidualBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim)
         self.attention_block = AttentionBlock((in_channels + out_channels), num_heads=num_heads)
-        self.residual_block_2 = ResidualBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim) #, residual=False)  
-        self.conv = nn.Conv2d((in_channels + out_channels), out_channels, kernel_size=3, stride=1, padding=1)
+        self.residual_block_2 = ResidualBlock((in_channels + out_channels), out_channels, t_emb_dim, residual=False)  
+        # self.conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x, out_down, t_emb):
         x = self.up_sample_conv(x)
@@ -171,8 +171,8 @@ class UpBlock(nn.Module):
             out = out + out_attn  
 
         out = self.residual_block_2(out, t_emb)        
-        out = self.conv(out)
-        return F.selu(out)
+        # out = self.conv(out)
+        return out
 
 #--------------------------------------------------------------------
 # The full model
@@ -182,7 +182,8 @@ class UNet_Diffusion(nn.Module):
         super(UNet_Diffusion, self).__init__()
 
         self.t_emb_dim = t_emb_dim
-        nb_filter = [32, 64, 128, 256, 512, 1024]
+        # nb_filter = [32, 64, 128, 256, 512, 1024]
+        nb_filter = [64, 128, 256, 512, 1024]
    
         # Initial projection from sinusoidal time embedding
         self.t_proj = nn.Sequential(
@@ -206,7 +207,7 @@ class UNet_Diffusion(nn.Module):
         self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=True)   # (size/2,  size/2)
         self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=True)   # (size/4,  size/4)
         self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=True)   # (size/8,  size/8)
-        self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=True)   # (size/16, size/16)
+        self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=False)  # (size/16, size/16)
 
         #------------------------------------------------------------
         # The Middle blocks
@@ -224,7 +225,6 @@ class UNet_Diffusion(nn.Module):
 
         
     def forward(self, x, t):
-        
         # t_emb -> B x t_emb_dim
         t_emb = get_time_embedding(torch.as_tensor(t).long(), self.t_emb_dim)
         t_emb = self.t_proj(t_emb)
