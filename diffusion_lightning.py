@@ -45,24 +45,24 @@ class DDPM(LightningModule):
     # we will run it with manual training (not automatic)
     # ---------------------------------------------------------------
     def training_step(self, batch, batch_idx):
-        im = batch[0].to(self.device)
-            
+        im = batch[0]
+
         # Sample random noise
         noise = torch.randn_like(im) 
         
         # Sample timestep
         t = torch.randint(0, self.num_timesteps, (im.shape[0],)) 
-        
+
         # Add noise to images according to timestep
-        noisy_im = self.scheduler.add_noise(im, noise, t).to(self.device)
+        noisy_im = self.scheduler.add_noise(im, noise, t).to(im)
 
         # Model tries to learn the noise that was added to im to make noise_im
-        noise_pred = self.forward(noisy_im, t.to(self.device))
+        noise_pred = self.forward(noisy_im, t.to(im))
 
         # Loss is our predicted noise relative to actual noise
-        loss = self.criterion(noise_pred.to(self.device), noise.to(self.device))
+        loss = self.criterion(noise_pred, noise)
 
-        self.log_dict({"loss": loss}, prog_bar=True)
+        self.log_dict({"loss": loss}, prog_bar=True, sync_dist=True)
         return loss
 
     def configure_optimizers(self):

@@ -17,7 +17,7 @@ from diffusion_lightning import DDPM
 from pathlib import Path
 image_dir_train = Path('../data/img_align_celeba/img_align_celeba/')
 img_size = (64,64) 
-batch_size = 8 
+batch_size = 6 
 train_transforms = Compose([ToDtype(torch.float32, scale=False),
                             RandomHorizontalFlip(p=0.50),
                             # RandomVerticalFlip(p=0.25),
@@ -34,14 +34,16 @@ train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuff
 #--------------------------------------------------------------------
 # Lightning module
 #--------------------------------------------------------------------
-model = DDPM()
+# model = DDPM()
+model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_0/checkpoints/epoch=0-step=25325.ckpt') 
+
 
 #--------------------------------------------------------------------
 # Training
 #--------------------------------------------------------------------
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
     save_top_k=1,
-    every_n_epochs=10,
+    every_n_epochs=1,
     monitor = 'loss',
     mode = 'min'
 )
