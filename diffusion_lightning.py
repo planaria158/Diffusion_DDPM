@@ -66,7 +66,7 @@ class DDPM(LightningModule):
         return loss
 
     def configure_optimizers(self):
-        lr = 0.0002
+        lr = 0.00002  # was 0.0002
         b1 = 0.5
         b2 = 0.999
         opt = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))

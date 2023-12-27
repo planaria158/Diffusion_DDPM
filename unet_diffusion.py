@@ -33,31 +33,31 @@ def get_time_embedding(time_steps, temb_dim):
     return t_emb
 
 
-class ResidualTimeBlock(nn.Module):
+class ResidualBlock(nn.Module):
     """
     Residual block with time embedding
     """
-    def __init__(self, in_channels, out_channels, t_emb_dim, residual=True, groupnorm=1):
+    def __init__(self, in_channels, out_channels, t_emb_dim, residual=True, numgroups=8):
         super().__init__()
         self.residual = residual
-        self.conv_1 = nn.Sequential(
+        self.in_block = nn.Sequential(
                       nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1),
-                      nn.GroupNorm(groupnorm, in_channels),
+                      nn.GroupNorm(numgroups, in_channels),
                       nn.SiLU(),
             )
-        self.t_emb = nn.Sequential(
+        self.time_block = nn.Sequential(
                      nn.SiLU(),
                      nn.Linear(t_emb_dim, in_channels)
             )
-        self.conv_2 = nn.Sequential(
+        self.out_block = nn.Sequential(
                       nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
-                      nn.GroupNorm(groupnorm, out_channels),
+                      nn.GroupNorm(numgroups, out_channels),
                 )
 
     def forward(self, x, t_emb):
-        out = self.conv_1(x)
-        out = out + self.t_emb(t_emb)[:, :, None, None]
-        out = self.conv_2(out)
+        out = self.in_block(x)
+        out = out + self.time_block(t_emb)[:, :, None, None]
+        out = self.out_block(out)
         if self.residual:
             out = out + x
 
@@ -68,9 +68,9 @@ class AttentionBlock(nn.Module):
     """
     Attention block with time embedding
     """
-    def __init__(self, out_channels, num_heads=4, groupnorm=1):
+    def __init__(self, out_channels, num_heads=4, numgroups=8):
         super().__init__()
-        self.attention_norms = nn.GroupNorm(groupnorm, out_channels)
+        self.attention_norms = nn.GroupNorm(numgroups, out_channels)
         self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
 
     def forward(self, x):
@@ -84,7 +84,6 @@ class AttentionBlock(nn.Module):
         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
         return out_attn
 
-
 class DownBlock(nn.Module):
     """
     Down conv block with attention.
@@ -96,24 +95,24 @@ class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4):
         super().__init__()
         self.attention = attention
-        self.residual_time_block_1 = ResidualTimeBlock(in_channels, in_channels, t_emb_dim, residual=True)
-        self.residual_time_block_2 = ResidualTimeBlock(in_channels, in_channels, t_emb_dim, residual=True)
+        self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim)
+        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads)
+        self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
-        self.attention_block = AttentionBlock(out_channels, num_heads=num_heads)
         # Strided convolution to downsize
         self.down_sample_conv = nn.Conv2d(out_channels, out_channels, kernel_size=4, stride=2, padding=1)
 
     def forward(self, x, t_emb):
-        out = self.residual_time_block_1(x, t_emb)
-        out = self.residual_time_block_2(x, t_emb)
-        out = self.conv(out)
+        out = self.residual_block_1(x, t_emb)
 
-        if self.attention:    
+        if self.attention:
             out_attn = self.attention_block(out)
             out = out + out_attn  
 
+        out = self.residual_block_2(x, t_emb)
+        out = self.conv(out)
         out = self.down_sample_conv(out)
-        return out
+        return F.silu(out)
 
 
 class MidBlock(nn.Module):
@@ -127,21 +126,21 @@ class MidBlock(nn.Module):
     def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4):
         super().__init__()
         self.attention = attention
-        self.residual_time_block_1 = ResidualTimeBlock(in_channels, in_channels, t_emb_dim)
-        self.residual_time_block_2 = ResidualTimeBlock(in_channels, in_channels, t_emb_dim)
+        self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim)
+        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads)
+        self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
-        self.attention_block = AttentionBlock(out_channels, num_heads=num_heads)
 
     def forward(self, x, t_emb):
-        out = self.residual_time_block_1(x, t_emb)    
-        out = self.residual_time_block_2(out, t_emb)        
-        out = self.conv(out)
+        out = self.residual_block_1(x, t_emb) 
 
         if self.attention:    
             out_attn = self.attention_block(out)
             out = out + out_attn  
 
-        return out
+        out = self.residual_block_2(out, t_emb)        
+        out = self.conv(out)
+        return F.silu(out)
 
 
 class UpBlock(nn.Module):
@@ -157,22 +156,23 @@ class UpBlock(nn.Module):
         super().__init__()
         self.attention = attention
         self.up_sample_conv = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=4, stride=2, padding=1)
-        self.residual_time_block_1 = ResidualTimeBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim)
-        self.residual_time_block_2 = ResidualTimeBlock((in_channels + out_channels), in_channels, t_emb_dim, residual=False)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
-        self.attention_block = AttentionBlock(out_channels, num_heads=num_heads)
+        self.residual_block_1 = ResidualBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim)
+        self.attention_block = AttentionBlock((in_channels + out_channels), num_heads=num_heads)
+        self.residual_block_2 = ResidualBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim) #, residual=False)  
+        self.conv = nn.Conv2d((in_channels + out_channels), out_channels, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x, out_down, t_emb):
         x = self.up_sample_conv(x)
         out = torch.cat([x, out_down], dim=1)  # add in the skip connection from corresponding DownBlock
-        out = self.residual_time_block_1(out, t_emb)        
-        out = self.residual_time_block_2(out, t_emb)        
-        out = self.conv(out)
+        out = self.residual_block_1(out, t_emb)        
+
         if self.attention:    
             out_attn = self.attention_block(out)
             out = out + out_attn  
 
-        return out
+        out = self.residual_block_2(out, t_emb)        
+        out = self.conv(out)
+        return F.selu(out)
 
 #--------------------------------------------------------------------
 # The full model
@@ -184,8 +184,6 @@ class UNet_Diffusion(nn.Module):
         self.t_emb_dim = t_emb_dim
         nb_filter = [32, 64, 128, 256, 512, 1024]
    
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
-
         # Initial projection from sinusoidal time embedding
         self.t_proj = nn.Sequential(
             nn.Linear(self.t_emb_dim, self.t_emb_dim),
@@ -197,7 +195,7 @@ class UNet_Diffusion(nn.Module):
         self.conv_in = nn.Conv2d(3, nb_filter[0], kernel_size=3, padding=1)
 
         # last layers
-        self.norm_out = nn.GroupNorm(1, nb_filter[0])
+        self.norm_out = nn.GroupNorm(8, nb_filter[0])
         self.up_conv_out = nn.ConvTranspose2d(nb_filter[0], nb_filter[0], kernel_size=4, stride=2, padding=1)
         self.conv_out_1 = nn.Conv2d(nb_filter[0], nb_filter[0], kernel_size=3, padding=1)
         self.conv_out_2 = nn.Conv2d(nb_filter[0], 3, kernel_size=1, padding=0)
@@ -258,7 +256,7 @@ class UNet_Diffusion(nn.Module):
 
         # Last output layer
         out = self.norm_out(dec_0)
-        out = nn.SiLU()(out)
+        out = F.silu(out)
         out = self.up_conv_out(out)
         out = self.conv_out_1(out)
         out = self.conv_out_2(out)

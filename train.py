@@ -17,7 +17,7 @@ from diffusion_lightning import DDPM
 from pathlib import Path
 image_dir_train = Path('../data/img_align_celeba/img_align_celeba/')
 img_size = (64,64) 
-batch_size = 6 
+batch_size = 12
 train_transforms = Compose([ToDtype(torch.float32, scale=False),
                             RandomHorizontalFlip(p=0.50),
                             # RandomVerticalFlip(p=0.25),
@@ -34,25 +34,25 @@ train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuff
 #--------------------------------------------------------------------
 # Lightning module
 #--------------------------------------------------------------------
-# model = DDPM()
-model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_0/checkpoints/epoch=0-step=25325.ckpt') 
+model = DDPM()
+# model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_4/checkpoints/epoch=12-step=438971.ckpt') 
 
 
 #--------------------------------------------------------------------
 # Training
 #--------------------------------------------------------------------
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    save_top_k=1,
+    save_top_k=10,
     every_n_epochs=1,
     monitor = 'loss',
     mode = 'min'
 )
 
 from lightning.pytorch.loggers import TensorBoardLogger
-logger = TensorBoardLogger(save_dir=os.getcwd(), name="lightning_logs")
+logger = TensorBoardLogger(save_dir=os.getcwd(), name="lightning_logs", default_hp_metric=False)
 
 trainer = pl.Trainer(accelerator='gpu', devices=1, max_epochs=500,
-                     logger=logger, log_every_n_steps=10, callbacks=[checkpoint_callback]) 
+                     logger=logger, log_every_n_steps=1000, callbacks=[checkpoint_callback]) 
 
 trainer.fit(model=model, train_dataloaders=train_loader) 
 
