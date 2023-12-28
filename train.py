@@ -22,7 +22,7 @@ image_dir_train = Path('../data/img_align_celeba/img_align_celeba/train/')
 image_dir_valid = Path('../data/img_align_celeba/img_align_celeba/valid/')
 
 img_size = (64,64) 
-batch_size = 12
+batch_size = 10
 
 
 train_transforms = Compose([ToDtype(torch.float32, scale=False),
@@ -42,14 +42,14 @@ valid_transforms = Compose([ToDtype(torch.float32, scale=False),
 train_dataset = CelebA(image_dir_train, transform=train_transforms)
 train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle = True, num_workers=5, persistent_workers=True)
 
-valid_dataset = CelebA(image_dir_valid, transform=valid_transforms)
-valid_loader = utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle = False, num_workers=5, persistent_workers=True)
+# valid_dataset = CelebA(image_dir_valid, transform=valid_transforms)
+# valid_loader = utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle = False, num_workers=5, persistent_workers=True)
 
 #--------------------------------------------------------------------
 # Lightning module
 #--------------------------------------------------------------------
 model = DDPM()
-# model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_4/checkpoints/epoch=12-step=438971.ckpt') 
+# model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_8/checkpoints/epoch=4-step=75975.ckpt') 
 
 total_params = sum(param.numel() for param in model.parameters())
 print('Model has:', int(total_params//1e6), 'M parameters')
@@ -70,7 +70,7 @@ logger = TensorBoardLogger(save_dir=os.getcwd(), name="lightning_logs", default_
 trainer = pl.Trainer(accelerator='gpu', devices=1, max_epochs=500,
                      logger=logger, log_every_n_steps=1000, callbacks=[checkpoint_callback]) 
 
-trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valid_loader) 
+trainer.fit(model=model, train_dataloaders=train_loader) #, val_dataloaders=valid_loader) 
 
 
 

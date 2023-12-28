@@ -5,23 +5,48 @@
 #
 #--------------------------------------------------------------------
 
-import os
-import numpy as np
 import torch
-import torch.nn.functional as F
 from pytorch_lightning.core import LightningModule
-import torchvision.utils as vutils
-from numpy.random import random, choice
-import pickle
 from torch import nn
-import torch.nn.functional as F
 import pytorch_lightning as pl
-from numpy.random import choice
-import pytorch_lightning as pl
+import copy
 
-from celeba_dataset import CelebA
 from unet_diffusion import UNet_Diffusion
 from noise_scheduler import LinearNoiseScheduler
+
+
+# -------------------------------------------------------------------
+# Exponential moving average for more stable training
+# copied from https://github.com/dome272/Diffusion-Models-pytorch
+# -------------------------------------------------------------------
+class EMA:
+    def __init__(self, beta):
+        super().__init__()
+        self.beta = beta
+        self.step = 0
+
+    def update_model_average(self, ma_model, current_model):
+        for current_params, ma_params in zip(current_model.parameters(), ma_model.parameters()):
+            old_weight, up_weight = ma_params.data, current_params.data
+            ma_params.data = self.update_average(old_weight, up_weight)
+
+    def update_average(self, old, new):
+        if old is None:
+            return new
+        return old * self.beta + (1 - self.beta) * new
+
+    def step_ema(self, ema_model, model, step_start_ema=2000):
+        if self.step < step_start_ema:
+            self.reset_parameters(ema_model, model)
+            self.step += 1
+            return
+        self.update_model_average(ema_model, model)
+        self.step += 1
+
+    def reset_parameters(self, ema_model, model):
+        ema_model.load_state_dict(model.state_dict())
+
+
 
 class DDPM(LightningModule):
     def __init__(self,
@@ -35,6 +60,9 @@ class DDPM(LightningModule):
         self.num_epochs = 500
         self.model = UNet_Diffusion(self.time_emb_dim)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
+        self.ema = EMA(0.995)
+        self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
+
         self.save_hyperparameters()
     
     def forward(self, noisy_im, t):
@@ -61,6 +89,12 @@ class DDPM(LightningModule):
         loss = self.common_forward(batch)
         self.log_dict({"loss": loss}, prog_bar=True, sync_dist=True)
         return loss
+    
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        # Apply the EMA-based weights update
+        self.ema.step_ema(self.ema_model, self.model)
+        return
+
 
     # ---------------------------------------------------------------
     # Validation step:
