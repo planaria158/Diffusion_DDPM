@@ -11,7 +11,7 @@ This contains my implementation of a stable diffusion model.
 
 <hr>
 
-| <img src="images/epoch_30_inference.png" alt="epoch 30" width="500"/> | 
+| <img src="images/epoch_40_inference.png" alt="epoch 40" width="500"/> | 
 |:--:| 
-| *Inference after 30 epochs* |
+| *Inference after 40 epochs* |
 
