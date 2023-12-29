@@ -20,10 +20,11 @@ from noise_scheduler import LinearNoiseScheduler
 # copied from https://github.com/dome272/Diffusion-Models-pytorch
 # -------------------------------------------------------------------
 class EMA:
-    def __init__(self, beta):
+    def __init__(self, beta, warmup=2000):
         super().__init__()
         self.beta = beta
         self.step = 0
+        self.warmup_steps = warmup
 
     def update_model_average(self, ma_model, current_model):
         for current_params, ma_params in zip(current_model.parameters(), ma_model.parameters()):
@@ -35,17 +36,17 @@ class EMA:
             return new
         return old * self.beta + (1 - self.beta) * new
 
-    def step_ema(self, ema_model, model, step_start_ema=2000):
-        if self.step < step_start_ema:
+    def step_ema(self, ema_model, model):
+        if self.step < self.warmup_steps:
             self.reset_parameters(ema_model, model)
             self.step += 1
             return
+        
         self.update_model_average(ema_model, model)
         self.step += 1
 
     def reset_parameters(self, ema_model, model):
         ema_model.load_state_dict(model.state_dict())
-
 
 
 class DDPM(LightningModule):
@@ -62,7 +63,6 @@ class DDPM(LightningModule):
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
         self.ema = EMA(0.995)
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
-
         self.save_hyperparameters()
     
     def forward(self, noisy_im, t):
@@ -95,7 +95,6 @@ class DDPM(LightningModule):
         self.ema.step_ema(self.ema_model, self.model)
         return
 
-
     # ---------------------------------------------------------------
     # Validation step:
     # ---------------------------------------------------------------
@@ -107,17 +106,16 @@ class DDPM(LightningModule):
 
     def on_load_checkpoint(self, checkpoint):
         print("\nRestarting from checkpoint")
-        print(type(checkpoint))
-        print(checkpoint.keys())
-        print('epoch:', checkpoint['epoch'])
-        print('global_step:', checkpoint['global_step'])
-        print('lr_schedulers:', checkpoint['lr_schedulers'])
-        print('loops:', checkpoint['loops'])
-        print('hyper_parameters:', checkpoint['hyper_parameters'])
-        print('type(optimizer_states):', type(checkpoint['optimizer_states'][0]))
-        print('self.current_epoch;', self.current_epoch)
+        # print(type(checkpoint))
+        # print(checkpoint.keys())
+        # print('epoch:', checkpoint['epoch'])
+        # print('global_step:', checkpoint['global_step'])
+        # print('lr_schedulers:', checkpoint['lr_schedulers'])
+        # print('loops:', checkpoint['loops'])
+        # print('hyper_parameters:', checkpoint['hyper_parameters'])
+        # print('type(optimizer_states):', type(checkpoint['optimizer_states'][0]))
+        # print('self.current_epoch;', self.current_epoch)
         # self.current_epoch = checkpoint['epoch']
-
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.ema.step = checkpoint['global_step'] 
         print('on_load_checkpoint: calling self.ema.step:', self.ema.step)

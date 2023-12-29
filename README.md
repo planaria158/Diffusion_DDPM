@@ -4,9 +4,9 @@ This contains my implementation of a stable diffusion model.
 
 # Training details
 * Dataset: CelebA
-* train/test split: 90/10
+* train/test split: 90/10, train=182339 images / test=20259
 * image size: 64x64
-* batch size: 8
+* batch size: 10
 * GPU: GeForce RTX 2080 Ti, 12GB
 
 <hr>

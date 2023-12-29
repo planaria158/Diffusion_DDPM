@@ -49,7 +49,7 @@ train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuff
 # Lightning module
 #--------------------------------------------------------------------
 # model = DDPM()
-model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_10/checkpoints/epoch=5-step=109404.ckpt') 
+model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_11/checkpoints/epoch=25-step=474084.ckpt') 
 
 total_params = sum(param.numel() for param in model.parameters())
 print('Model has:', int(total_params//1e6), 'M parameters')
@@ -68,7 +68,7 @@ from lightning.pytorch.loggers import TensorBoardLogger
 logger = TensorBoardLogger(save_dir=os.getcwd(), name="lightning_logs", default_hp_metric=False)
 
 trainer = pl.Trainer(accelerator='gpu', devices=1, max_epochs=500,
-                     logger=logger, log_every_n_steps=1000, callbacks=[checkpoint_callback]) 
+                     logger=logger, log_every_n_steps=2000, callbacks=[checkpoint_callback]) 
 
 trainer.fit(model=model, train_dataloaders=train_loader) #, val_dataloaders=valid_loader) 
 
