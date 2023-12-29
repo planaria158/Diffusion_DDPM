@@ -87,11 +87,11 @@ class DDPM(LightningModule):
     # ---------------------------------------------------------------
     def training_step(self, batch, batch_idx):
         loss = self.common_forward(batch)
-        self.log_dict({"loss": loss}, prog_bar=True, sync_dist=True)
+        self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
         return loss
     
     def on_train_batch_end(self, outputs, batch, batch_idx):
-        # Apply the EMA-based weights update
+        # After every batch, apply the EMA-based weights update
         self.ema.step_ema(self.ema_model, self.model)
         return
 
@@ -101,15 +101,35 @@ class DDPM(LightningModule):
     # ---------------------------------------------------------------
     def validation_step(self, batch, batch_idx):
         val_loss = self.common_forward(batch)
-        self.log_dict({"val_loss": val_loss}, prog_bar=True, sync_dist=True)
+        self.log_dict({"val_loss": val_loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
         return val_loss
     
 
+    def on_load_checkpoint(self, checkpoint):
+        print("\nRestarting from checkpoint")
+        print(type(checkpoint))
+        print(checkpoint.keys())
+        print('epoch:', checkpoint['epoch'])
+        print('global_step:', checkpoint['global_step'])
+        print('lr_schedulers:', checkpoint['lr_schedulers'])
+        print('loops:', checkpoint['loops'])
+        print('hyper_parameters:', checkpoint['hyper_parameters'])
+        print('type(optimizer_states):', type(checkpoint['optimizer_states'][0]))
+        print('self.current_epoch;', self.current_epoch)
+        # self.current_epoch = checkpoint['epoch']
+
+        self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
+        self.ema.step = checkpoint['global_step'] 
+        print('on_load_checkpoint: calling self.ema.step:', self.ema.step)
+        return
+
     def configure_optimizers(self):
-        lr = 0.00002  # was 0.0002
+        lr = 0.0002  
         b1 = 0.5
         b2 = 0.999
-        opt = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
-        return opt
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
+        # I have no evidence to suggest scheduler is an improvement, but let's give it a whirl anyway :)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.9)
+        return [optimizer], [scheduler]
 
  

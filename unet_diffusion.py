@@ -66,7 +66,7 @@ class ResidualBlock(nn.Module):
 
 class AttentionBlock(nn.Module):
     """
-    Attention block with time embedding
+    Attention block
     """
     def __init__(self, out_channels, num_heads=4, numgroups=8):
         super().__init__()
