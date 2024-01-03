@@ -79,7 +79,7 @@ class AttentionBlock(nn.Module):
         batch_size, channels, h, w = out.shape
         in_attn = out.reshape(batch_size, channels, h * w)
         in_attn = self.attention_norms(in_attn)
-        in_attn = in_attn.transpose(1, 2)
+        in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
         out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
         return out_attn
