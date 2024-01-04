@@ -67,7 +67,7 @@ class ResidualBlock(nn.Module):
 # class AttentionBlock_new(nn.Module):
 #     def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0., numgroups=8):  
 #         super().__init__()
-#         self.attention_norms = nn.GroupNorm(numgroups, dim) ??
+#         self.attention_norms = nn.GroupNorm(numgroups, dim) # shit ??
 
 #         inner_dim = dim_head *  heads
 #         project_out = not (heads == 1 and dim_head == dim)
@@ -75,24 +75,31 @@ class ResidualBlock(nn.Module):
 #         self.scale = dim_head ** -0.5
 #         self.attend = nn.Softmax(dim = -1)
 #         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
-#         self.to_out = nn.Sequential(
-#             nn.Linear(inner_dim, dim),
-#             nn.Dropout(dropout)
-#         ) if project_out else nn.Identity()
+#         # self.to_out = nn.Sequential(
+#         #     nn.Linear(inner_dim, dim),
+#         #     nn.Dropout(dropout)
+#         # ) if project_out else nn.Identity()
 
 #     def forward(self, x):
+#         print('\ninput x shape:', x.shape)
 #         batch_size, channels, h, w = x.shape
 #         in_attn = out.reshape(batch_size, channels, h * w)
 #         in_attn = self.attention_norms(in_attn)
 #         in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
+#         print('in_attn shape:', in_attn.shape)
 
 #         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
+#         print('\n\nqkv, len:', len(qkv), ', qkv[0] shape:', qkv[0].shape)
 #         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+#         print('q shape:', q.shape, ', k shape:', k.shape, ', v shape:', v.shape)
 #         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+#         print('q*k dot product shape:', dots.shape)
 #         attn = self.attend(dots)
+#         print('attn shape:', attn.shape)
 #         out = torch.matmul(attn, v)
-#         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)        
-#         # out = rearrange(out, 'b h n d -> b n (h d)')
+#         print('1. out shape:', out.shape)
+#         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
+#         print('2. out shape:', out.shape)        
 #         return out  #self.to_out(out)
 
 
