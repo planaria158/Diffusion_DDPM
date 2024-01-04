@@ -21,14 +21,13 @@ from pathlib import Path
 image_dir_train = Path('../data/img_align_celeba/img_align_celeba/train/')
 image_dir_valid = Path('../data/img_align_celeba/img_align_celeba/valid/')
 
-img_size = (64,64) 
-batch_size = 10
-
+img_size = (128,128) 
+batch_size = 4
 
 train_transforms = Compose([ToDtype(torch.float32, scale=False),
                             RandomHorizontalFlip(p=0.50),
                             # RandomVerticalFlip(p=0.25),
-                            # transforms.RandomApply(nn.ModuleList([GaussianBlur(kernel_size=7)]), p=0.5),
+                            transforms.RandomApply(nn.ModuleList([GaussianBlur(kernel_size=5)]), p=0.5),
                             # transforms.RandomApply(nn.ModuleList([RandomRotation(10.0)]), p=0.5),
                             # RandomResizedCrop(size=img_size, scale=(0.3, 1.0), antialias=True),
                             # RandomErasing(p=0.5, scale=(0.02, 0.20)),
@@ -48,8 +47,8 @@ train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuff
 #--------------------------------------------------------------------
 # Lightning module
 #--------------------------------------------------------------------
-# model = DDPM()
-model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_11/checkpoints/epoch=25-step=474084.ckpt') 
+model = DDPM()
+# model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_11/checkpoints/epoch=25-step=474084.ckpt') 
 
 total_params = sum(param.numel() for param in model.parameters())
 print('Model has:', int(total_params//1e6), 'M parameters')
@@ -67,8 +66,9 @@ checkpoint_callback = pl.callbacks.ModelCheckpoint(
 from lightning.pytorch.loggers import TensorBoardLogger
 logger = TensorBoardLogger(save_dir=os.getcwd(), name="lightning_logs", default_hp_metric=False)
 
-trainer = pl.Trainer(accelerator='gpu', devices=1, max_epochs=500,
-                     logger=logger, log_every_n_steps=2000, callbacks=[checkpoint_callback]) 
+# Note: I tried to run in single precision, float16, but it produced NANs.
+trainer = pl.Trainer(strategy='ddp_find_unused_parameters_true', accelerator='gpu', devices=2, max_epochs=1500,
+                     logger=logger, log_every_n_steps=500, callbacks=[checkpoint_callback]) 
 
 trainer.fit(model=model, train_dataloaders=train_loader) #, val_dataloaders=valid_loader) 
 

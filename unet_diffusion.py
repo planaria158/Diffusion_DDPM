@@ -10,6 +10,7 @@ This UNet is modified for use as a diffusion model.  It contains the time embedd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from einops import rearrange
 
 def get_time_embedding(time_steps, temb_dim):
     r"""
@@ -63,11 +64,39 @@ class ResidualBlock(nn.Module):
 
         return F.silu(out)
 
+# class AttentionBlock_new(nn.Module):
+#     def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0., numgroups=8):  
+#         super().__init__()
+#         self.attention_norms = nn.GroupNorm(numgroups, dim) ??
+
+#         inner_dim = dim_head *  heads
+#         project_out = not (heads == 1 and dim_head == dim)
+#         self.heads = heads
+#         self.scale = dim_head ** -0.5
+#         self.attend = nn.Softmax(dim = -1)
+#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+#         self.to_out = nn.Sequential(
+#             nn.Linear(inner_dim, dim),
+#             nn.Dropout(dropout)
+#         ) if project_out else nn.Identity()
+
+#     def forward(self, x):
+#         batch_size, channels, h, w = x.shape
+#         in_attn = out.reshape(batch_size, channels, h * w)
+#         in_attn = self.attention_norms(in_attn)
+#         in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
+
+#         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
+#         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+#         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+#         attn = self.attend(dots)
+#         out = torch.matmul(attn, v)
+#         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)        
+#         # out = rearrange(out, 'b h n d -> b n (h d)')
+#         return out  #self.to_out(out)
+
 
 class AttentionBlock(nn.Module):
-    """
-    Attention block
-    """
     def __init__(self, out_channels, num_heads=4, numgroups=8):
         super().__init__()
         self.attention_norms = nn.GroupNorm(numgroups, out_channels)
@@ -204,10 +233,10 @@ class UNet_Diffusion(nn.Module):
         #------------------------------------------------------------
         # The Encoding down blocks. Input image = (size, size)
         #------------------------------------------------------------
-        self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=True)   # (size/2,  size/2)
-        self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=True)   # (size/4,  size/4)
-        self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=True)   # (size/8,  size/8)
-        self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=False)  # (size/16, size/16)
+        self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=False)   # (size/2,  size/2)
+        self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=True)    # (size/4,  size/4)
+        self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=True)    # (size/8,  size/8)
+        self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=False)   # (size/16, size/16)
 
         #------------------------------------------------------------
         # The Middle blocks
@@ -221,7 +250,7 @@ class UNet_Diffusion(nn.Module):
         #------------------------------------------------------------
         self.up_2 = UpBlock(nb_filter[3], nb_filter[2], self.t_emb_dim, attention=True) 
         self.up_1 = UpBlock(nb_filter[2], nb_filter[1], self.t_emb_dim, attention=True) 
-        self.up_0 = UpBlock(nb_filter[1], nb_filter[0], self.t_emb_dim, attention=True) 
+        self.up_0 = UpBlock(nb_filter[1], nb_filter[0], self.t_emb_dim, attention=False) 
 
         
     def forward(self, x, t):
