@@ -47,7 +47,7 @@ class ResidualBlock(nn.Module):
                       nn.SiLU(),
             )
         self.time_block = nn.Sequential(
-                     nn.SiLU(),
+                     nn.SiLU(),      # ?? is this backwards?  nn.Linear should be first??
                      nn.Linear(t_emb_dim, in_channels)
             )
         self.out_block = nn.Sequential(
@@ -64,61 +64,65 @@ class ResidualBlock(nn.Module):
 
         return F.silu(out)
 
-# class AttentionBlock_new(nn.Module):
-#     def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0., numgroups=8):  
-#         super().__init__()
-#         self.attention_norms = nn.GroupNorm(numgroups, dim) # shit ??
+class AttentionBlock(nn.Module):
+    # When used to process image batches [b, c, h, w]: 
+    #     emb_dim == c, the number of channels
+    #     sequence == (h*w), the logical sequence
+    #
+    #  Images reshaped to [b, (h*w), c]
+    #  Wq, Wk, Wv weight matrices will each be: [emb_dim, 3*(heads * dim_head)]
+    #
+    def __init__(self, emb_dim, num_heads=4, numgroups=8, dropout=0, bias=False):  
+        super().__init__()
+        assert emb_dim % numgroups == 0  # must divide equally
+        assert emb_dim % num_heads == 0  # must divide equally
+        self.heads = num_heads
+        self.attention_norm = nn.GroupNorm(numgroups, emb_dim)
+        inner_dim = emb_dim 
+        project_out = not (num_heads == 1)
+        self.scale = emb_dim ** -0.5  #dim_head ** -0.5
+        self.attend = nn.Softmax(dim = -1)
 
-#         inner_dim = dim_head *  heads
-#         project_out = not (heads == 1 and dim_head == dim)
-#         self.heads = heads
-#         self.scale = dim_head ** -0.5
-#         self.attend = nn.Softmax(dim = -1)
-#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
-#         # self.to_out = nn.Sequential(
-#         #     nn.Linear(inner_dim, dim),
-#         #     nn.Dropout(dropout)
-#         # ) if project_out else nn.Identity()
+        # This makes the Wq,Wk,Wv weight matrices
+        self.to_qkv = nn.Linear(emb_dim, inner_dim * 3, bias) #False) # ?? maybe should be True?
+
+        # self.to_out = nn.Sequential(
+        #     nn.Linear(inner_dim, emb_dim),
+        #     nn.Dropout(dropout)
+        # ) if project_out else nn.Identity()
+
+    def forward(self, x):
+        b, c, h, w = x.shape
+        in_attn = x.reshape(b, c, h * w)
+        in_attn = self.attention_norm(in_attn)
+        in_attn = in_attn.transpose(1, 2)  # reshape to [b, (h*w), c]
+
+        qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        attn = self.attend(dots)
+        out_attn = torch.matmul(attn, v)
+        out_attn = out_attn.transpose(1, 2).reshape(b, c, h, w)
+        # out_attn = self.to_out(out_attn)
+        # print('3. out_attn shape:', out_attn.shape)
+        return out_attn  
+
+# class AttentionBlock(nn.Module):
+#     def __init__(self, out_channels, num_heads=4, numgroups=8):
+#         super().__init__()
+#         self.attention_norms = nn.GroupNorm(numgroups, out_channels)
+#         self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
 
 #     def forward(self, x):
-#         print('\ninput x shape:', x.shape)
-#         batch_size, channels, h, w = x.shape
+#         out = x
+#         # Attention block of Unet
+#         batch_size, channels, h, w = out.shape
 #         in_attn = out.reshape(batch_size, channels, h * w)
 #         in_attn = self.attention_norms(in_attn)
 #         in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
-#         print('in_attn shape:', in_attn.shape)
-
-#         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
-#         print('\n\nqkv, len:', len(qkv), ', qkv[0] shape:', qkv[0].shape)
-#         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
-#         print('q shape:', q.shape, ', k shape:', k.shape, ', v shape:', v.shape)
-#         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-#         print('q*k dot product shape:', dots.shape)
-#         attn = self.attend(dots)
-#         print('attn shape:', attn.shape)
-#         out = torch.matmul(attn, v)
-#         print('1. out shape:', out.shape)
+#         out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
 #         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
-#         print('2. out shape:', out.shape)        
-#         return out  #self.to_out(out)
-
-
-class AttentionBlock(nn.Module):
-    def __init__(self, out_channels, num_heads=4, numgroups=8):
-        super().__init__()
-        self.attention_norms = nn.GroupNorm(numgroups, out_channels)
-        self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
-
-    def forward(self, x):
-        out = x
-        # Attention block of Unet
-        batch_size, channels, h, w = out.shape
-        in_attn = out.reshape(batch_size, channels, h * w)
-        in_attn = self.attention_norms(in_attn)
-        in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
-        out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
-        out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
-        return out_attn
+#         return out_attn
 
 class DownBlock(nn.Module):
     """
