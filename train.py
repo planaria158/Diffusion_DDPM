@@ -14,9 +14,6 @@ from diffusion_lightning import DDPM
 #--------------------------------------------------------------------
 # Dataset, Dataloader
 #--------------------------------------------------------------------
-#--------------------------------------------------------------------
-# Dataset, Dataloader
-#--------------------------------------------------------------------
 from pathlib import Path
 image_dir_train = Path('../data/img_align_celeba/img_align_celeba/train/')
 image_dir_valid = Path('../data/img_align_celeba/img_align_celeba/valid/')
