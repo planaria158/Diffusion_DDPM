@@ -22,12 +22,12 @@ image_dir_train = Path('../data/img_align_celeba/img_align_celeba/train/')
 image_dir_valid = Path('../data/img_align_celeba/img_align_celeba/valid/')
 
 img_size = (64,64) 
-batch_size = 64
+batch_size = 8
 
 train_transforms = Compose([ToDtype(torch.float32, scale=False),
                             RandomHorizontalFlip(p=0.50),
                             # RandomVerticalFlip(p=0.25),
-                            transforms.RandomApply(nn.ModuleList([GaussianBlur(kernel_size=5)]), p=0.5),
+                            # transforms.RandomApply(nn.ModuleList([GaussianBlur(kernel_size=5)]), p=0.5),
                             # transforms.RandomApply(nn.ModuleList([RandomRotation(10.0)]), p=0.5),
                             # RandomResizedCrop(size=img_size, scale=(0.3, 1.0), antialias=True),
                             # RandomErasing(p=0.5, scale=(0.02, 0.20)),

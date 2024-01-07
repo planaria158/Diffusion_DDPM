@@ -64,65 +64,55 @@ class ResidualBlock(nn.Module):
 
         return F.silu(out)
 
-class AttentionBlock(nn.Module):
-    # When used to process image batches [b, c, h, w]: 
-    #     emb_dim == c, the number of channels
-    #     sequence == (h*w), the logical sequence
-    #
-    #  Images reshaped to [b, (h*w), c]
-    #  Wq, Wk, Wv weight matrices will each be: [emb_dim, 3*(heads * dim_head)]
-    #
-    def __init__(self, emb_dim, num_heads=4, numgroups=8, dropout=0, bias=False):  
-        super().__init__()
-        assert emb_dim % numgroups == 0  # must divide equally
-        assert emb_dim % num_heads == 0  # must divide equally
-        self.heads = num_heads
-        self.attention_norm = nn.GroupNorm(numgroups, emb_dim)
-        inner_dim = emb_dim 
-        project_out = not (num_heads == 1)
-        self.scale = emb_dim ** -0.5  #dim_head ** -0.5
-        self.attend = nn.Softmax(dim = -1)
-
-        # This makes the Wq,Wk,Wv weight matrices
-        self.to_qkv = nn.Linear(emb_dim, inner_dim * 3, bias) #False) # ?? maybe should be True?
-
-        # self.to_out = nn.Sequential(
-        #     nn.Linear(inner_dim, emb_dim),
-        #     nn.Dropout(dropout)
-        # ) if project_out else nn.Identity()
-
-    def forward(self, x):
-        b, c, h, w = x.shape
-        in_attn = x.reshape(b, c, h * w)
-        in_attn = self.attention_norm(in_attn)
-        in_attn = in_attn.transpose(1, 2)  # reshape to [b, (h*w), c]
-
-        qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-        attn = self.attend(dots)
-        out_attn = torch.matmul(attn, v)
-        out_attn = out_attn.transpose(1, 2).reshape(b, c, h, w)
-        # out_attn = self.to_out(out_attn)
-        # print('3. out_attn shape:', out_attn.shape)
-        return out_attn  
-
 # class AttentionBlock(nn.Module):
-#     def __init__(self, out_channels, num_heads=4, numgroups=8):
+#     # When used to process image batches [b, c, h, w]: 
+#     #     emb_dim == c, the number of channels
+#     #     sequence == (h*w), the logical sequence
+#     #
+#     def __init__(self, emb_dim, num_heads = 4, numgroups=8, dropout = 0):  
 #         super().__init__()
-#         self.attention_norms = nn.GroupNorm(numgroups, out_channels)
-#         self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
+#         assert emb_dim % numgroups == 0  # must divide equally
+#         assert emb_dim % num_heads == 0  # must divide equally
+#         self.num_heads = num_heads
+#         self.gnorm = nn.GroupNorm(numgroups, emb_dim)
+#         inner_dim = emb_dim 
+#         # project_out = not (num_heads == 1)
+#         self.scale = emb_dim ** -0.5  #dim_head ** -0.5
+#         self.attend = nn.Softmax(dim = -1)
+
+#         # This makes the Wq,Wk,Wv weight matrices
+#         self.to_qkv = nn.Linear(emb_dim, inner_dim * 3, bias=False) 
 
 #     def forward(self, x):
-#         out = x
-#         # Attention block of Unet
-#         batch_size, channels, h, w = out.shape
-#         in_attn = out.reshape(batch_size, channels, h * w)
-#         in_attn = self.attention_norms(in_attn)
-#         in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
-#         out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
-#         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
-#         return out_attn
+#         b, c, h, w = x.shape
+#         in_attn = self.gnorm(x)
+#         in_attn = x.reshape(b, h * w, c)
+#         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
+#         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.num_heads), qkv) # [Batch, Head, SeqLen, Dims]
+#         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+#         attn = self.attend(dots)
+#         out_attn = torch.matmul(attn, v)
+#         out_attn = rearrange(out_attn, 'b h n d -> b n (h d)')
+#         out_attn = out_attn.transpose(1, 2).reshape(b, c, h, w)
+#         return out_attn  
+
+
+class AttentionBlock(nn.Module):
+    def __init__(self, out_channels, num_heads=4, numgroups=8):
+        super().__init__()
+        self.attention_norms = nn.GroupNorm(numgroups, out_channels)
+        self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
+
+    def forward(self, x):
+        out = x
+        # Attention block of Unet
+        batch_size, channels, h, w = out.shape
+        in_attn = out.reshape(batch_size, channels, h * w)
+        in_attn = self.attention_norms(in_attn)
+        in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
+        out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
+        out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
+        return out_attn
 
 class DownBlock(nn.Module):
     """
@@ -244,7 +234,7 @@ class UNet_Diffusion(nn.Module):
         #------------------------------------------------------------
         # The Encoding down blocks. Input image = (size, size)
         #------------------------------------------------------------
-        self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=False)   # (size/2,  size/2)
+        self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=True)    # (size/2,  size/2)
         self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=True)    # (size/4,  size/4)
         self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=True)    # (size/8,  size/8)
         self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=False)   # (size/16, size/16)
@@ -261,7 +251,7 @@ class UNet_Diffusion(nn.Module):
         #------------------------------------------------------------
         self.up_2 = UpBlock(nb_filter[3], nb_filter[2], self.t_emb_dim, attention=True) 
         self.up_1 = UpBlock(nb_filter[2], nb_filter[1], self.t_emb_dim, attention=True) 
-        self.up_0 = UpBlock(nb_filter[1], nb_filter[0], self.t_emb_dim, attention=False) 
+        self.up_0 = UpBlock(nb_filter[1], nb_filter[0], self.t_emb_dim, attention=True) 
 
         
     def forward(self, x, t):
