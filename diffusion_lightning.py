@@ -20,7 +20,7 @@ from noise_scheduler import LinearNoiseScheduler
 # copied from https://github.com/dome272/Diffusion-Models-pytorch
 # -------------------------------------------------------------------
 class EMA:
-    def __init__(self, beta, warmup=1000):
+    def __init__(self, beta, warmup=2000):
         super().__init__()
         self.beta = beta
         self.step = 0
