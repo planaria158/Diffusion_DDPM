@@ -20,7 +20,7 @@ from noise_scheduler import LinearNoiseScheduler
 # copied from https://github.com/dome272/Diffusion-Models-pytorch
 # -------------------------------------------------------------------
 class EMA:
-    def __init__(self, beta, warmup=1000):
+    def __init__(self, beta, warmup=2000):
         super().__init__()
         self.beta = beta
         self.step = 0
@@ -106,22 +106,22 @@ class DDPM(LightningModule):
         return val_loss
     
 
-    # def on_load_checkpoint(self, checkpoint):
-    #     print("\nRestarting from checkpoint")
-    #     # print(type(checkpoint))
-    #     # print(checkpoint.keys())
-    #     # print('epoch:', checkpoint['epoch'])
-    #     # print('global_step:', checkpoint['global_step'])
-    #     # print('lr_schedulers:', checkpoint['lr_schedulers'])
-    #     # print('loops:', checkpoint['loops'])
-    #     # print('hyper_parameters:', checkpoint['hyper_parameters'])
-    #     # print('type(optimizer_states):', type(checkpoint['optimizer_states'][0]))
-    #     # print('self.current_epoch;', self.current_epoch)
-    #     # self.current_epoch = checkpoint['epoch']
-    #     self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
-    #     self.ema.step = checkpoint['global_step'] 
-    #     print('on_load_checkpoint: calling self.ema.step:', self.ema.step)
-    #     return
+    def on_load_checkpoint(self, checkpoint):
+        print("\nRestarting from checkpoint")
+        # print(type(checkpoint))
+        # print(checkpoint.keys())
+        # print('epoch:', checkpoint['epoch'])
+        # print('global_step:', checkpoint['global_step'])
+        # print('lr_schedulers:', checkpoint['lr_schedulers'])
+        # print('loops:', checkpoint['loops'])
+        # print('hyper_parameters:', checkpoint['hyper_parameters'])
+        # print('type(optimizer_states):', type(checkpoint['optimizer_states'][0]))
+        # print('self.current_epoch;', self.current_epoch)
+        # self.current_epoch = checkpoint['epoch']
+        self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
+        self.ema.step = checkpoint['global_step'] 
+        print('on_load_checkpoint: calling self.ema.step:', self.ema.step)
+        return
 
     def configure_optimizers(self):
         lr = 0.0002  

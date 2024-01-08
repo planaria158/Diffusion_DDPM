@@ -21,34 +21,22 @@ from pathlib import Path
 image_dir_train = Path('../data/img_align_celeba/img_align_celeba/train/')
 image_dir_valid = Path('../data/img_align_celeba/img_align_celeba/valid/')
 
-img_size = (128,128) 
-batch_size = 4
+img_size = (64,64) 
+batch_size = 80
 
 train_transforms = Compose([ToDtype(torch.float32, scale=False),
                             RandomHorizontalFlip(p=0.50),
-                            # RandomVerticalFlip(p=0.25),
-                            transforms.RandomApply(nn.ModuleList([GaussianBlur(kernel_size=5)]), p=0.5),
-                            # transforms.RandomApply(nn.ModuleList([RandomRotation(10.0)]), p=0.5),
-                            # RandomResizedCrop(size=img_size, scale=(0.3, 1.0), antialias=True),
-                            # RandomErasing(p=0.5, scale=(0.02, 0.20)),
-                            Resize(img_size, antialias=True)
-                            ])
-
-valid_transforms = Compose([ToDtype(torch.float32, scale=False),
                             Resize(img_size, antialias=True)
                             ])
 
 train_dataset = CelebA(image_dir_train, transform=train_transforms)
 train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle = True, num_workers=5, persistent_workers=True)
 
-# valid_dataset = CelebA(image_dir_valid, transform=valid_transforms)
-# valid_loader = utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle = False, num_workers=5, persistent_workers=True)
-
 #--------------------------------------------------------------------
 # Lightning module
 #--------------------------------------------------------------------
 model = DDPM()
-# model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_11/checkpoints/epoch=25-step=474084.ckpt') 
+# model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_1/checkpoints/epoch=17-step=164106.ckpt') 
 
 total_params = sum(param.numel() for param in model.parameters())
 print('Model has:', int(total_params//1e6), 'M parameters')
@@ -70,7 +58,6 @@ logger = TensorBoardLogger(save_dir=os.getcwd(), name="lightning_logs", default_
 trainer = pl.Trainer(strategy='ddp_find_unused_parameters_true', accelerator='gpu', devices=2, max_epochs=1500,
                      logger=logger, log_every_n_steps=500, callbacks=[checkpoint_callback]) 
 
-trainer.fit(model=model, train_dataloaders=train_loader) #, val_dataloaders=valid_loader) 
-
+trainer.fit(model=model, train_dataloaders=train_loader) 
 
 
