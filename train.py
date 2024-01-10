@@ -68,7 +68,7 @@ def train(args):
 
     total_params = sum(param.numel() for param in model.parameters())
     print('Model has:', int(total_params//1e6), 'M parameters')
-    log_param('model_num_parameters_millions', int(total_params//1e6))
+    log_param('model_parameter_count', total_params)
 
 # %%
     #--------------------------------------------------------------------

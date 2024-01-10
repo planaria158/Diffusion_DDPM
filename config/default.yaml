@@ -12,14 +12,14 @@ model_params:
   time_emb_dim : 256
   channels : [64, 128, 256, 512, 1024]
   down_attn: [False, True, True, False]
+  down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
+
   mid_attn:  [False, False, False]
+  mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
+
   up_attn:   [True, True, False]
-  num_heads : 12
-  # mid_channels : [256, 256, 128]
-  # down_sample : [True, True, False]
-  # num_down_layers : 2
-  # num_mid_layers : 2
-  # num_up_layers : 2
+  up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
+  num_heads : 4
 
 train_params:
   log_dir: './lightning_logs/'

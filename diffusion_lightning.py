@@ -93,7 +93,8 @@ class DDPM(LightningModule):
     # ---------------------------------------------------------------
     def training_step(self, batch, batch_idx):
         loss = self.common_forward(batch)
-        self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
+        self.log_dict({"loss": loss}, on_epoch=True, on_step=True, prog_bar=True, sync_dist=True)
+        # self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
         return loss
     
     def on_train_batch_end(self, outputs, batch, batch_idx):
