@@ -207,12 +207,18 @@ class UpBlock(nn.Module):
 # Assumes input images are rgb, 3 channel
 #--------------------------------------------------------------------
 class UNet_Diffusion(nn.Module):
-    def __init__(self, t_emb_dim):
+    def __init__(self, config):
         super(UNet_Diffusion, self).__init__()
 
-        self.t_emb_dim = t_emb_dim
-        nb_filter = [64, 128, 256, 512, 1024]
+        self.t_emb_dim = config['time_emb_dim']
+        num_heads = config['num_heads']
+        nb_filter = config['channels']
+        assert(nb_filter == [64, 128, 256, 512, 1024])
    
+        down_attn = config['down_attn']
+        mid_attn = config['mid_attn']
+        up_attn = config['up_attn']
+
         # Initial projection from sinusoidal time embedding
         self.t_proj = nn.Sequential(
             nn.Linear(self.t_emb_dim, self.t_emb_dim),
@@ -232,24 +238,24 @@ class UNet_Diffusion(nn.Module):
         #------------------------------------------------------------
         # The Encoding down blocks. Input image = (size, size)
         #------------------------------------------------------------
-        self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=False)   # (size/2,  size/2)
-        self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=True)    # (size/4,  size/4)
-        self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=True)    # (size/8,  size/8)
-        self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=False)   # (size/16, size/16)
+        self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=down_attn[0], num_heads=num_heads)  # (size/2,  size/2)
+        self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=down_attn[1], num_heads=num_heads)  # (size/4,  size/4)
+        self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=down_attn[2], num_heads=num_heads)  # (size/8,  size/8)
+        self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=down_attn[3], num_heads=num_heads)  # (size/16, size/16)
 
         #------------------------------------------------------------
         # The Middle blocks
         #------------------------------------------------------------
-        self.mid_1 = MidBlock(nb_filter[3], nb_filter[4], self.t_emb_dim, attention=False)
-        self.mid_2 = MidBlock(nb_filter[4], nb_filter[4], self.t_emb_dim, attention=False)
-        self.mid_3 = MidBlock(nb_filter[4], nb_filter[3], self.t_emb_dim, attention=False)
+        self.mid_1 = MidBlock(nb_filter[3], nb_filter[4], self.t_emb_dim, attention=mid_attn[0], num_heads=num_heads, )
+        self.mid_2 = MidBlock(nb_filter[4], nb_filter[4], self.t_emb_dim, attention=mid_attn[1], num_heads=num_heads, )
+        self.mid_3 = MidBlock(nb_filter[4], nb_filter[3], self.t_emb_dim, attention=mid_attn[2], num_heads=num_heads, )
             
         #------------------------------------------------------------
         # The Decoding Up blocks
         #------------------------------------------------------------
-        self.up_2 = UpBlock(nb_filter[3], nb_filter[2], self.t_emb_dim, attention=True) 
-        self.up_1 = UpBlock(nb_filter[2], nb_filter[1], self.t_emb_dim, attention=True) 
-        self.up_0 = UpBlock(nb_filter[1], nb_filter[0], self.t_emb_dim, attention=False) 
+        self.up_2 = UpBlock(nb_filter[3], nb_filter[2], self.t_emb_dim, attention=up_attn[0], num_heads=num_heads) 
+        self.up_1 = UpBlock(nb_filter[2], nb_filter[1], self.t_emb_dim, attention=up_attn[1], num_heads=num_heads) 
+        self.up_0 = UpBlock(nb_filter[1], nb_filter[0], self.t_emb_dim, attention=up_attn[2], num_heads=num_heads) 
 
         
     def forward(self, x, t):

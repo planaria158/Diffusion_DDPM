@@ -4,7 +4,7 @@ import os
 import torch
 import yaml
 import mlflow
-# from mlflow import log_metric, log_artifact, log_params
+from mlflow import log_metric, log_artifact, log_params, log_param
 import argparse
 from torch import utils
 from torch import nn
@@ -14,8 +14,7 @@ from torchvision.transforms.v2 import Resize, Compose, ToDtype, RandomHorizontal
 from celeba_dataset import CelebA
 from diffusion_lightning import DDPM
 
-mlflow. set_tracking_uri() 
-mlflow.autolog()
+# mlflow. set_tracking_uri() 
 
 # %%
 def train(args):
@@ -29,7 +28,7 @@ def train(args):
             print(exc)
 
     print(config)
-    # log_params(config)
+    log_params(config)
 
     diffusion_config = config['diffusion_params']
     dataset_config = config['dataset_params']
@@ -69,6 +68,7 @@ def train(args):
 
     total_params = sum(param.numel() for param in model.parameters())
     print('Model has:', int(total_params//1e6), 'M parameters')
+    log_param('model_num_parameters_millions', int(total_params//1e6))
 
 # %%
     #--------------------------------------------------------------------

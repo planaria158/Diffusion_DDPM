@@ -10,23 +10,26 @@ diffusion_params:
 model_params:
   img_size : [64,64]
   time_emb_dim : 256
-  # down_channels : [32, 64, 128, 256]
+  channels : [64, 128, 256, 512, 1024]
+  down_attn: [False, True, True, False]
+  mid_attn:  [False, False, False]
+  up_attn:   [True, True, False]
+  num_heads : 12
   # mid_channels : [256, 256, 128]
   # down_sample : [True, True, False]
   # num_down_layers : 2
   # num_mid_layers : 2
   # num_up_layers : 2
-  # num_heads : 4
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 64
-  num_epochs: 500
+  batch_size: 10
+  num_epochs: 1
   restart: False
   checkpoint_name: 'none' #'version_10/checkpoints/epoch=5-step=91170.ckpt'
   log_every_nsteps: 1000
-  accelerator: 'gpu'
-  devices: 2
+  accelerator: 'cpu'
+  devices: 1
   save_top_k: 10
   checkpoint_every_n_epochs: 1
   monitor: 'loss'

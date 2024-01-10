@@ -10,7 +10,7 @@ from pytorch_lightning.core import LightningModule
 from torch import nn
 import pytorch_lightning as pl
 import copy
-
+from mlflow import log_metric, log_artifact, log_params, log_param
 from unet_diffusion import UNet_Diffusion
 from noise_scheduler import LinearNoiseScheduler
 
@@ -20,7 +20,7 @@ from noise_scheduler import LinearNoiseScheduler
 # copied from https://github.com/dome272/Diffusion-Models-pytorch
 # -------------------------------------------------------------------
 class EMA:
-    def __init__(self, beta, warmup=2000):
+    def __init__(self, beta=0.9999, warmup=2000):
         super().__init__()
         self.beta = beta
         self.step = 0
@@ -57,12 +57,19 @@ class DDPM(LightningModule):
         self.num_timesteps = diffusion_config['num_timesteps']
         self.beta_start = diffusion_config['beta_start']
         self.beta_end = diffusion_config['beta_end']
-        self.time_emb_dim = config['time_emb_dim']
-        self.model = UNet_Diffusion(self.time_emb_dim)
+        # self.time_emb_dim = config['time_emb_dim']
+        self.model = UNet_Diffusion(config)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
-        self.ema = EMA(0.9999)
+        self.ema = EMA()
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
+
+        self.__log_params()
+
+    def __log_params(self):
+        log_param('criterion', self.criterion)
+        log_param('ema_warmup', self.ema.warmup_steps)
+        log_param('ema_beta', self.ema.beta)
 
     def forward(self, noisy_im, t):
         return self.model(noisy_im, t)
