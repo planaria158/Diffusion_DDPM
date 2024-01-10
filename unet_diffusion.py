@@ -7,6 +7,7 @@ This UNet is modified for use as a diffusion model.  It contains the time embedd
 
 """
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -65,7 +66,7 @@ class ResidualBlock(nn.Module):
         return F.silu(out)
 
 class AttentionBlock(nn.Module):
-    def __init__(self, dim, num_heads=4, numgroups=8, dim_head=64, dropout=0.):  
+    def __init__(self, dim, num_heads=12, numgroups=8, dim_head=64, dropout=0.):  
         super().__init__()
         inner_dim = dim_head *  num_heads
         project_out = not (num_heads == 1 and dim_head == dim)
@@ -78,6 +79,8 @@ class AttentionBlock(nn.Module):
             nn.Linear(inner_dim, dim),
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
+
+        # torch.nn.init.normal_(self.to_qkv.weights.data, mean=0.0, std=0.02/math.sqrt(2 * (dim+inner_dim)))
 
     def forward(self, x):
         b, c, h, w = x.shape

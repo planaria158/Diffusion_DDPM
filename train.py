@@ -32,8 +32,8 @@ train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuff
 #--------------------------------------------------------------------
 # Lightning module
 #--------------------------------------------------------------------
-model = DDPM()
-# model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_1/checkpoints/epoch=17-step=164106.ckpt') 
+# model = DDPM()
+model = DDPM.load_from_checkpoint(checkpoint_path='/home/mark/dev/diffusion/lightning_logs/version_8/checkpoints/epoch=26-step=30780.ckpt') 
 
 total_params = sum(param.numel() for param in model.parameters())
 print('Model has:', int(total_params//1e6), 'M parameters')

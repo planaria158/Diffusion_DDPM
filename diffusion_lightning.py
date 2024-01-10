@@ -61,10 +61,8 @@ class DDPM(LightningModule):
         self.num_epochs = 500
         self.model = UNet_Diffusion(self.time_emb_dim)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
-
-        self.ema = EMA(0.995)
+        self.ema = EMA(0.9999)
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
-
         self.save_hyperparameters()
     
     def forward(self, noisy_im, t):
@@ -124,7 +122,7 @@ class DDPM(LightningModule):
         return
 
     def configure_optimizers(self):
-        lr = 0.0002  
+        lr = 0.0001  
         b1 = 0.5
         b2 = 0.999
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))

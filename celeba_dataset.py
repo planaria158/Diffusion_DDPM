@@ -8,13 +8,17 @@ from torchvision.io import read_image
 from torch.utils.data import Dataset
 
 class CelebA(Dataset):
-    def __init__(self, img_dir, transform=None, target_transform=None):
+    def __init__(self, img_dir, transform=None, target_transform=None, limit_size=False, size_limit=20):
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
         self.noise_factor = 0.50
         filepaths = pd.Series(list(self.img_dir.glob(r'**/*.jpg')), name='Filepath', dtype = 'object').astype(str)
         self.images = pd.concat([filepaths], axis=1).sample(frac=1.0, random_state=1).reset_index(drop=True)
+        if limit_size:
+            assert size_limit > 0
+            self.images = self.images.iloc[0:size_limit]
+
         print('Dataset has', self.images.shape[0], 'rows')
 
     def __len__(self):
