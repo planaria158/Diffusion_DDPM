@@ -4,6 +4,7 @@ import os
 import torch
 import yaml
 import mlflow
+# from mlflow import log_metric, log_artifact, log_params
 import argparse
 from torch import utils
 from torch import nn
@@ -13,6 +14,8 @@ from torchvision.transforms.v2 import Resize, Compose, ToDtype, RandomHorizontal
 from celeba_dataset import CelebA
 from diffusion_lightning import DDPM
 
+mlflow. set_tracking_uri() 
+mlflow.autolog()
 
 # %%
 def train(args):
@@ -26,6 +29,7 @@ def train(args):
             print(exc)
 
     print(config)
+    # log_params(config)
 
     diffusion_config = config['diffusion_params']
     dataset_config = config['dataset_params']
@@ -40,7 +44,7 @@ def train(args):
     image_dir_train = Path(dataset_config['train_path'])
     image_dir_valid = Path(dataset_config['valid_path'])
 
-    img_size = (model_config['img_size'], model_config['img_size'])
+    img_size = tuple(model_config['img_size'])
     batch_size = train_config['batch_size']
 
     train_transforms = Compose([ToDtype(torch.float32, scale=False),
