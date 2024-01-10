@@ -57,7 +57,6 @@ class DDPM(LightningModule):
         self.num_timesteps = diffusion_config['num_timesteps']
         self.beta_start = diffusion_config['beta_start']
         self.beta_end = diffusion_config['beta_end']
-        # self.time_emb_dim = config['time_emb_dim']
         self.model = UNet_Diffusion(config)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
         self.ema = EMA()
@@ -93,8 +92,7 @@ class DDPM(LightningModule):
     # ---------------------------------------------------------------
     def training_step(self, batch, batch_idx):
         loss = self.common_forward(batch)
-        self.log_dict({"loss": loss}, on_epoch=True, on_step=True, prog_bar=True, sync_dist=True)
-        # self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
+        self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
         return loss
     
     def on_train_batch_end(self, outputs, batch, batch_idx):

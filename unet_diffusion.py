@@ -220,17 +220,14 @@ class UNet_Diffusion(nn.Module):
    
         down_attn = config['down_attn']
         down_channel_indices = config['down_channel_indices']
-        print('down_channel_indices:', down_channel_indices)
         assert(len(down_channel_indices) == len(down_attn))
 
         mid_attn = config['mid_attn']
         mid_channel_indices = config['mid_channel_indices']
-        print('mid_channel_indices:', mid_channel_indices)
         assert(len(mid_channel_indices) == len(mid_attn))
 
         up_attn = config['up_attn']
         up_channel_indices = config['up_channel_indices']
-        print('up_channel_indices:', up_channel_indices)
         assert(len(up_channel_indices) == len(up_attn))
 
         # Initial projection from sinusoidal time embedding
@@ -258,7 +255,7 @@ class UNet_Diffusion(nn.Module):
         # self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=down_attn[2], num_heads=num_heads)  # (size/8,  size/8)
         # self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=down_attn[3], num_heads=num_heads)  # (size/16, size/16)
         #------------------------------------------------------------
-        self.down_blocks = []
+        self.down_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(down_channel_indices, down_attn):
             self.down_blocks.append(DownBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, num_heads=num_heads))
 
@@ -269,7 +266,7 @@ class UNet_Diffusion(nn.Module):
         # self.mid_2 = MidBlock(channels[4], channels[4], self.t_emb_dim, attention=mid_attn[1], num_heads=num_heads, )
         # self.mid_3 = MidBlock(channels[4], channels[3], self.t_emb_dim, attention=mid_attn[2], num_heads=num_heads, )
         #------------------------------------------------------------
-        self.mid_blocks = []
+        self.mid_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(mid_channel_indices, mid_attn):
             self.mid_blocks.append(MidBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, num_heads=num_heads))
             
@@ -280,11 +277,10 @@ class UNet_Diffusion(nn.Module):
         # self.up_1 = UpBlock(channels[2], channels[1], self.t_emb_dim, attention=up_attn[1], num_heads=num_heads) 
         # self.up_0 = UpBlock(channels[1], channels[0], self.t_emb_dim, attention=up_attn[2], num_heads=num_heads) 
         #------------------------------------------------------------
-        self.up_blocks = []
+        self.up_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(up_channel_indices, up_attn):
             self.up_blocks.append(UpBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, num_heads=num_heads))
         
-
 
     def forward(self, x, t):
         # t_emb -> B x t_emb_dim
