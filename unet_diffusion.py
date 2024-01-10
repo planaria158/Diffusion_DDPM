@@ -80,8 +80,6 @@ class AttentionBlock(nn.Module):
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
 
-        # torch.nn.init.normal_(self.to_qkv.weights.data, mean=0.0, std=0.02/math.sqrt(2 * (dim+inner_dim)))
-
     def forward(self, x):
         b, c, h, w = x.shape
         in_attn = self.attention_norm(x)
@@ -206,13 +204,13 @@ class UpBlock(nn.Module):
 
 #--------------------------------------------------------------------
 # The full model
+# Assumes input images are rgb, 3 channel
 #--------------------------------------------------------------------
 class UNet_Diffusion(nn.Module):
-    def __init__(self, t_emb_dim, attention=True):
+    def __init__(self, t_emb_dim):
         super(UNet_Diffusion, self).__init__()
 
         self.t_emb_dim = t_emb_dim
-        # nb_filter = [32, 64, 128, 256, 512, 1024]
         nb_filter = [64, 128, 256, 512, 1024]
    
         # Initial projection from sinusoidal time embedding

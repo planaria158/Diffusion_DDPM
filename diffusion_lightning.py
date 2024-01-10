@@ -50,21 +50,20 @@ class EMA:
 
 
 class DDPM(LightningModule):
-    def __init__(self,
-                **kwargs):
+    def __init__(self, config, diffusion_config, **kwargs):
         super().__init__()
+
         self.criterion = nn.MSELoss()
-        self.num_timesteps = 1000
-        self.beta_start = 0.0001
-        self.beta_end = 0.02
-        self.time_emb_dim = 256
-        self.num_epochs = 500
+        self.num_timesteps = diffusion_config['num_timesteps']
+        self.beta_start = diffusion_config['beta_start']
+        self.beta_end = diffusion_config['beta_end']
+        self.time_emb_dim = config['time_emb_dim']
         self.model = UNet_Diffusion(self.time_emb_dim)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
         self.ema = EMA(0.9999)
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
-    
+
     def forward(self, noisy_im, t):
         return self.model(noisy_im, t)
     
@@ -126,8 +125,7 @@ class DDPM(LightningModule):
         b1 = 0.5
         b2 = 0.999
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
-        # I have no evidence to suggest scheduler is an improvement, but let's give it a whirl anyway :)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.9)
-        return [optimizer], [scheduler]
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.9)
+        return [optimizer] #, [scheduler]
 
  
