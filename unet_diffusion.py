@@ -66,35 +66,36 @@ class ResidualBlock(nn.Module):
 
         return F.silu(out)
 
-# class AttentionBlock(nn.Module):
-#     def __init__(self, dim, num_heads=12, numgroups=8, dim_head=64, dropout=0.):  
-#         super().__init__()
-#         inner_dim = dim_head *  num_heads
-#         project_out = not (num_heads == 1 and dim_head == dim)
-#         self.heads = num_heads
-#         self.attention_norm = nn.GroupNorm(numgroups, dim)
-#         self.scale = dim_head ** -0.5
-#         self.attend = nn.Softmax(dim = -1)
-#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
-#         self.to_out = nn.Sequential(
-#             nn.Linear(inner_dim, dim),
-#             nn.Dropout(dropout)
-#         ) if project_out else nn.Identity()
+class AttentionBlock_new(nn.Module):
+    def __init__(self, dim, num_heads=4, numgroups=8, dropout=0.):  
+        super().__init__()
+        dim_head = dim // num_heads
+        inner_dim = dim #dim_head *  num_heads
+        project_out = not (num_heads == 1 and dim_head == dim)
+        self.heads = num_heads
+        self.attention_norm = nn.GroupNorm(numgroups, dim)
+        self.scale = dim_head ** -0.5
+        self.attend = nn.Softmax(dim = -1)
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout)
+        ) if project_out else nn.Identity()
 
-#     def forward(self, x):
-#         b, c, h, w = x.shape
-#         in_attn = self.attention_norm(x)
-#         in_attn = x.reshape(b, h * w, c)
-#         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
-#         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
-#         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-#         attn = self.attend(dots)
-#         out = torch.matmul(attn, v)
-#         out = rearrange(out, 'b h n d -> b n (h d)')
-#         out = self.to_out(out)
-#         out = out.transpose(1, 2).reshape(b, c, h, w)
-#         return out 
-
+    def forward(self, x):
+        b, c, h, w = x.shape
+        in_attn = self.attention_norm(x)
+        in_attn = x.reshape(b, h * w, c)
+        qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        attn = self.attend(dots)
+        out = torch.matmul(attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        # out = self.to_out(out)
+        out = out.transpose(1, 2).reshape(b, c, h, w)
+        return out 
+   
 
 class AttentionBlock(nn.Module):
     def __init__(self, out_channels, num_heads=4, numgroups=8):
