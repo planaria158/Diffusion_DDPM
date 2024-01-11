@@ -5,6 +5,7 @@ import torch
 import yaml
 import mlflow
 from mlflow import log_metric, log_artifact, log_params, log_param
+from mlflow.models.signature import infer_signature
 import argparse
 from torch import utils
 from torch import nn
@@ -14,10 +15,13 @@ from torchvision.transforms.v2 import Resize, Compose, ToDtype, RandomHorizontal
 from celeba_dataset import CelebA
 from diffusion_lightning import DDPM
 
-# mlflow. set_tracking_uri() 
 
 # %%
 def train(args):
+
+    mlflow.set_experiment(experiment_name='DDPM_test_training')
+    run = mlflow.start_run()
+
     #--------------------------------------------------------------------
     # Read config
     #--------------------------------------------------------------------
@@ -51,12 +55,14 @@ def train(args):
                                 Resize(img_size, antialias=True)
                                 ])
 
-    train_dataset = CelebA(image_dir_train, transform=train_transforms)
+    train_dataset = CelebA(image_dir_train, transform=train_transforms, 
+                           limit_size=dataset_config['limit_size'], 
+                           size_limit=dataset_config['size_limit']) 
     train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=5, persistent_workers=True)
 
 # %%
     #--------------------------------------------------------------------
-    # Lightning module
+    # LightningModule
     #--------------------------------------------------------------------
     if train_config['restart']:
         print('Restarting from checkpoint')
@@ -87,23 +93,30 @@ def train(args):
     # Note: I tried to run in single and mixed-precision; both produced NANs.
     if train_config['accelerator'] == 'gpu':
         trainer = pl.Trainer(strategy='ddp_find_unused_parameters_true', 
-                             accelerator=train_config['accelerator'], 
-                             devices=train_config['devices'], 
-                             max_epochs=train_config['num_epochs'], 
-                             logger=logger, 
-                             log_every_n_steps=train_config['log_every_nsteps'], 
-                             callbacks=[checkpoint_callback]) 
+                            accelerator=train_config['accelerator'], 
+                            devices=train_config['devices'], 
+                            max_epochs=train_config['num_epochs'], 
+                            logger=logger, 
+                            log_every_n_steps=train_config['log_every_nsteps'], 
+                            callbacks=[checkpoint_callback]) 
     else:
         trainer = pl.Trainer(accelerator=train_config['accelerator'], 
-                             max_epochs=train_config['num_epochs'], 
-                             logger=logger, 
-                             log_every_n_steps=train_config['log_every_nsteps'], 
-                             callbacks=[checkpoint_callback]) 
+                            max_epochs=train_config['num_epochs'], 
+                            logger=logger, 
+                            log_every_n_steps=train_config['log_every_nsteps'], 
+                            callbacks=[checkpoint_callback]) 
 
 
     trainer.fit(model=model, train_dataloaders=train_loader) 
 
+    # Log the PyTorch model with the signature
+    mlflow.pytorch.log_model(model, "model") #, signature=signature)
+
     print('\n\nTraining complete!')
+
+    mlflow.end_run()
+    print(f"run_id: {run.info.run_id}; status: {run.info.status}")
+
 
 # %%
 if __name__ == '__main__':
