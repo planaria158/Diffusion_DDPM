@@ -10,7 +10,7 @@ from pytorch_lightning.core import LightningModule
 from torch import nn
 import pytorch_lightning as pl
 import copy
-from mlflow import log_metric, log_artifact, log_params, log_param
+from mlflow import log_metric, log_param
 from unet_diffusion import UNet_Diffusion
 from noise_scheduler import LinearNoiseScheduler
 
@@ -62,10 +62,8 @@ class DDPM(LightningModule):
         self.ema = EMA()
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
+        self.training_step_outputs = []
 
-        self.__log_params()
-
-    def __log_params(self):
         log_param('criterion', self.criterion)
         log_param('ema_warmup', self.ema.warmup_steps)
         log_param('ema_beta', self.ema.beta)
@@ -93,11 +91,19 @@ class DDPM(LightningModule):
     def training_step(self, batch, batch_idx):
         loss = self.common_forward(batch)
         self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
+        self.training_step_outputs.append(loss)
         return loss
     
     def on_train_batch_end(self, outputs, batch, batch_idx):
         # After every batch, apply the EMA-based weights update
         self.ema.step_ema(self.ema_model, self.model)
+        return
+
+    def on_train_epoch_end(self):
+        # do something with all training_step outputs, for example:
+        avg_loss = torch.stack(self.training_step_outputs).mean()
+        log_metric("loss", avg_loss, step=self.current_epoch)
+        self.training_step_outputs.clear()
         return
 
     # ---------------------------------------------------------------
@@ -131,6 +137,10 @@ class DDPM(LightningModule):
         b1 = 0.5
         b2 = 0.999
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
+        log_param('optimizer', optimizer)
+        log_param('Adam_lr', lr)
+        log_param('Adam_b1', b1)
+        log_param('Adam_b2', b2)
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.9)
         return [optimizer] #, [scheduler]
 

@@ -1,6 +1,8 @@
 dataset_params:
   train_path: '../data/img_align_celeba/img_align_celeba/train/'
   valid_path: '../data/img_align_celeba/img_align_celeba/valid/'
+  limit_size: True
+  size_limit: 40
 
 diffusion_params:
   num_timesteps : 1000
@@ -23,13 +25,13 @@ model_params:
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 64
-  num_epochs: 200
+  batch_size: 10
+  num_epochs: 50
   restart: False
   checkpoint_name: 'none' #'version_10/checkpoints/epoch=5-step=91170.ckpt'
   log_every_nsteps: 1000
-  accelerator: 'gpu'
-  devices: 2
+  accelerator: 'cpu'
+  devices: 1
   save_top_k: 10
   checkpoint_every_n_epochs: 1
   monitor: 'loss'
