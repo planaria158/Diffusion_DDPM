@@ -66,10 +66,11 @@ class ResidualBlock(nn.Module):
 
         return F.silu(out)
 
-class AttentionBlock_new(nn.Module):
+class AttentionBlock(nn.Module):
     def __init__(self, dim, num_heads=4, numgroups=8, dropout=0.):  
         super().__init__()
         dim_head = dim // num_heads
+        print('AttentionBlock, dim:', dim, ', dim_head:', dim_head)
         inner_dim = dim #dim_head *  num_heads
         project_out = not (num_heads == 1 and dim_head == dim)
         self.heads = num_heads
@@ -97,22 +98,22 @@ class AttentionBlock_new(nn.Module):
         return out 
    
 
-class AttentionBlock(nn.Module):
-    def __init__(self, out_channels, num_heads=4, numgroups=8):
-        super().__init__()
-        self.attention_norms = nn.GroupNorm(numgroups, out_channels)
-        self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
+# class AttentionBlock(nn.Module):
+#     def __init__(self, out_channels, num_heads=4, numgroups=8):
+#         super().__init__()
+#         self.attention_norms = nn.GroupNorm(numgroups, out_channels)
+#         self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
 
-    def forward(self, x):
-        out = x
-        # Attention block of Unet
-        batch_size, channels, h, w = out.shape
-        in_attn = out.reshape(batch_size, channels, h * w)
-        in_attn = self.attention_norms(in_attn)
-        in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
-        out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
-        out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
-        return out_attn
+#     def forward(self, x):
+#         out = x
+#         # Attention block of Unet
+#         batch_size, channels, h, w = out.shape
+#         in_attn = out.reshape(batch_size, channels, h * w)
+#         in_attn = self.attention_norms(in_attn)
+#         in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
+#         out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
+#         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
+#         return out_attn
 
 class DownBlock(nn.Module):
     """
