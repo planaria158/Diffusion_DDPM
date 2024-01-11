@@ -62,7 +62,8 @@ class DDPM(LightningModule):
         self.ema = EMA()
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
-        self.training_step_outputs = []
+        self.training_epoch_total_loss = 0
+        self.batch_count = 0
 
         log_param('criterion', self.criterion)
         log_param('ema_warmup', self.ema.warmup_steps)
@@ -91,7 +92,8 @@ class DDPM(LightningModule):
     def training_step(self, batch, batch_idx):
         loss = self.common_forward(batch)
         self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
-        self.training_step_outputs.append(loss)
+        self.training_epoch_total_loss += loss
+        self.batch_count += 1
         return loss
     
     def on_train_batch_end(self, outputs, batch, batch_idx):
@@ -101,9 +103,10 @@ class DDPM(LightningModule):
 
     def on_train_epoch_end(self):
         # do something with all training_step outputs, for example:
-        avg_loss = torch.stack(self.training_step_outputs).mean()
+        avg_loss = self.training_epoch_total_loss/self.batch_count
         log_metric("loss", avg_loss, step=self.current_epoch)
-        self.training_step_outputs.clear()
+        self.training_epoch_total_loss = 0
+        self.batch_count = 0
         return
 
     # ---------------------------------------------------------------
