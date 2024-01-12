@@ -23,6 +23,9 @@ model_params:
   up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 4
 
+  dropout: 0.1   Wire these up.
+  droupout_attn: 0.1
+
 train_params:
   log_dir: './lightning_logs/'
   batch_size: 64
