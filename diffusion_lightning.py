@@ -63,7 +63,9 @@ class DDPM(LightningModule):
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
         self.training_epoch_total_loss = 0
-        self.batch_count = 0
+        self.training_batch_count = 0
+        self.validation_epoch_total_loss = 0
+        self.validation_batch_count = 0
 
         log_param('criterion', self.criterion)
         log_param('ema_warmup', self.ema.warmup_steps)
@@ -93,7 +95,7 @@ class DDPM(LightningModule):
         loss = self.common_forward(batch)
         self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
         self.training_epoch_total_loss += loss
-        self.batch_count += 1
+        self.training_batch_count += 1
         return loss
     
     def on_train_batch_end(self, outputs, batch, batch_idx):
@@ -103,10 +105,10 @@ class DDPM(LightningModule):
 
     def on_train_epoch_end(self):
         # do something with all training_step outputs, for example:
-        avg_loss = self.training_epoch_total_loss/self.batch_count
+        avg_loss = self.training_epoch_total_loss/self.training_batch_count
         log_metric("loss", avg_loss, step=self.current_epoch)
         self.training_epoch_total_loss = 0
-        self.batch_count = 0
+        self.training_batch_count = 0
         return
 
     # ---------------------------------------------------------------
@@ -115,21 +117,19 @@ class DDPM(LightningModule):
     def validation_step(self, batch, batch_idx):
         val_loss = self.common_forward(batch)
         self.log_dict({"val_loss": val_loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
+        self.validation_epoch_total_loss += val_loss
+        self.validation_batch_count += 1
         return val_loss
     
+    def on_validation_end(self):
+        avg_loss = self.validation_epoch_total_loss/self.validation_batch_count
+        log_metric("val_loss", avg_loss, step=self.current_epoch)
+        self.validation_epoch_total_loss = 0
+        self.validation_batch_count = 0
+
 
     def on_load_checkpoint(self, checkpoint):
         print("\nRestarting from checkpoint")
-        # print(type(checkpoint))
-        # print(checkpoint.keys())
-        # print('epoch:', checkpoint['epoch'])
-        # print('global_step:', checkpoint['global_step'])
-        # print('lr_schedulers:', checkpoint['lr_schedulers'])
-        # print('loops:', checkpoint['loops'])
-        # print('hyper_parameters:', checkpoint['hyper_parameters'])
-        # print('type(optimizer_states):', type(checkpoint['optimizer_states'][0]))
-        # print('self.current_epoch;', self.current_epoch)
-        # self.current_epoch = checkpoint['epoch']
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.ema.step = checkpoint['global_step'] 
         print('on_load_checkpoint: calling self.ema.step:', self.ema.step)

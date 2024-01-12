@@ -55,10 +55,25 @@ def train(args):
                                 Resize(img_size, antialias=True)
                                 ])
 
-    train_dataset = CelebA(image_dir_train, transform=train_transforms, 
+    validation_transforms = Compose([ToDtype(torch.float32, scale=False),
+                                     Resize(img_size, antialias=True)
+                                    ])
+    
+    log_param('train_transforms', train_transforms)
+    log_param('validation_transforms', validation_transforms)
+
+    train_dataset = CelebA(image_dir_train, 
+                           transform=train_transforms, 
                            limit_size=dataset_config['limit_size'], 
                            size_limit=dataset_config['size_limit']) 
+    
+    validation_dataset = CelebA(image_dir_valid, 
+                                transform=validation_transforms, 
+                                limit_size=False, 
+                                size_limit=-1) 
+    
     train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=5, persistent_workers=True)
+    validation_loader = utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
 
 # %%
     #--------------------------------------------------------------------
@@ -107,7 +122,7 @@ def train(args):
                             callbacks=[checkpoint_callback]) 
 
 
-    trainer.fit(model=model, train_dataloaders=train_loader) 
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader) 
 
     # Log the PyTorch model with the signature
     mlflow.pytorch.log_model(model, "model") #, signature=signature)
