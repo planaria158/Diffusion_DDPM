@@ -58,7 +58,7 @@ def train(args):
     validation_transforms = Compose([ToDtype(torch.float32, scale=False),
                                      Resize(img_size, antialias=True)
                                     ])
-    
+     
     log_param('train_transforms', train_transforms)
     log_param('validation_transforms', validation_transforms)
 

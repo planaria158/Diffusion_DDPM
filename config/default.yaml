@@ -21,13 +21,14 @@ model_params:
 
   up_attn:   [True, True, False]
   up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
-  num_heads : 4
+  num_heads : 8
+  dim_head : 64
   dropout: 0.1 
   attn_dropout: 0.1
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 48
+  batch_size: 32
   num_epochs: 200
   restart: False
   checkpoint_name: 'none' #'version_10/checkpoints/epoch=5-step=91170.ckpt'

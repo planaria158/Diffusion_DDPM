@@ -2,3 +2,4 @@ mlruns
 lightning_logs
 __pycache__
 diffusion.code-workspace
+nohup.out

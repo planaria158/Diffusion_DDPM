@@ -67,10 +67,11 @@ class ResidualBlock(nn.Module):
         return F.silu(out)
 
 class AttentionBlock(nn.Module):
-    def __init__(self, dim, num_heads=4, numgroups=8, dropout=0.):  
-        super().__init__()
-        dim_head = dim // num_heads
-        inner_dim = dim #dim_head *  num_heads
+    def __init__(self, dim, num_heads=4, dim_head=64, numgroups=8, dropout=0.):  
+        super().__init__()        
+        inner_dim = dim_head * num_heads
+        # dim_head = dim // num_heads
+        # inner_dim = dim 
         project_out = not (num_heads == 1 and dim_head == dim)
         self.heads = num_heads
         self.attention_norm = nn.GroupNorm(numgroups, dim)
@@ -127,11 +128,11 @@ class DownBlock(nn.Module):
     2. Attention block
     3. Downsample strided convolution
     """
-    def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4, dropout=0, attn_dropout=0):
+    def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4, dim_head=64, dropout=0, attn_dropout=0):
         super().__init__()
         self.attention = attention
         self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dropout=attn_dropout)
+        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
         self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
         # Strided convolution to downsize
@@ -158,11 +159,11 @@ class MidBlock(nn.Module):
     2. Attention block
     3. Residual block with time embedding
     """
-    def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4, dropout=0, attn_dropout=0):
+    def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4, dim_head=64, dropout=0, attn_dropout=0):
         super().__init__()
         self.attention = attention
         self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dropout=attn_dropout)
+        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
         self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
@@ -187,12 +188,12 @@ class UpBlock(nn.Module):
     2. Residual block with time embedding
     3. Attention Block
     """
-    def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4, dropout=0, attn_dropout=0):
+    def __init__(self, in_channels, out_channels, t_emb_dim, attention=True, num_heads=4, dim_head=64, dropout=0, attn_dropout=0):
         super().__init__()
         self.attention = attention
         self.up_sample_conv = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=4, stride=2, padding=1)
         self.residual_block_1 = ResidualBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock((in_channels + out_channels), num_heads=num_heads, dropout=attn_dropout)
+        self.attention_block = AttentionBlock((in_channels + out_channels), num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
         self.residual_block_2 = ResidualBlock((in_channels + out_channels), out_channels, t_emb_dim, residual=False, dropout=dropout)  
         # self.conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
@@ -219,7 +220,10 @@ class UNet_Diffusion(nn.Module):
 
         self.t_emb_dim = config['time_emb_dim']
         num_heads = config['num_heads']
+        dim_head = config['num_heads']
         channels = config['channels']
+        dropout = config['dropout']
+        attn_dropout = config['attn_dropout']
                 
         #[64, 128, 256, 512, 1024]
         assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
@@ -252,7 +256,6 @@ class UNet_Diffusion(nn.Module):
         self.conv_out_1 = nn.Conv2d(channels[0], channels[0], kernel_size=3, padding=1)
         self.conv_out_2 = nn.Conv2d(channels[0], 3, kernel_size=1, padding=0)
 
-
         #------------------------------------------------------------
         # The Encoding down blocks. Input image = (size, size)
         #
@@ -264,7 +267,8 @@ class UNet_Diffusion(nn.Module):
         self.down_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(down_channel_indices, down_attn):
             self.down_blocks.append(DownBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, 
-                                              num_heads=num_heads, dropout=config['dropout'], attn_dropout=config['attn_dropout']))
+                                              num_heads=num_heads, dim_head=dim_head,
+                                              dropout=dropout, attn_dropout=attn_dropout))
 
         #------------------------------------------------------------
         # The Middle blocks
@@ -276,7 +280,8 @@ class UNet_Diffusion(nn.Module):
         self.mid_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(mid_channel_indices, mid_attn):
             self.mid_blocks.append(MidBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, 
-                                            num_heads=num_heads, dropout=config['dropout'], attn_dropout=config['attn_dropout']))
+                                            num_heads=num_heads, dim_head=dim_head,
+                                            dropout=dropout, attn_dropout=attn_dropout))
             
         #------------------------------------------------------------
         # The Decoding Up blocks
@@ -288,7 +293,8 @@ class UNet_Diffusion(nn.Module):
         self.up_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(up_channel_indices, up_attn):
             self.up_blocks.append(UpBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, 
-                                          num_heads=num_heads, dropout=config['dropout'], attn_dropout=config['attn_dropout']))
+                                          num_heads=num_heads, dim_head=dim_head,
+                                          dropout=dropout, attn_dropout=attn_dropout))
         
 
     def forward(self, x, t):
