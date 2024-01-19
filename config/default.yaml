@@ -28,10 +28,10 @@ model_params:
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 26
+  batch_size: 24
   num_epochs: 200
   restart: False
-  checkpoint_name: 'none' #'version_10/checkpoints/epoch=5-step=91170.ckpt'
+  checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_18/checkpoints/epoch=44-step=820530.ckpt' 
   log_every_nsteps: 1000
   accelerator: 'gpu'
   devices: 2
