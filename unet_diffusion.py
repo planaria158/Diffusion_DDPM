@@ -240,7 +240,7 @@ class UNet_Diffusion(nn.Module):
         up_channel_indices = config['up_channel_indices']
         assert(len(up_channel_indices) == len(up_attn))
 
-        # Initial projection from sinusoidal time embedding
+        # Initial projection from the sinusoidal time embedding
         self.t_proj = nn.Sequential(
             nn.Linear(self.t_emb_dim, self.t_emb_dim),
             nn.SiLU(),
@@ -258,11 +258,6 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # The Encoding down blocks. Input image = (size, size)
-        #
-        # self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=down_attn[0], num_heads=num_heads)  # (size/2,  size/2)
-        # self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=down_attn[1], num_heads=num_heads)  # (size/4,  size/4)
-        # self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=down_attn[2], num_heads=num_heads)  # (size/8,  size/8)
-        # self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=down_attn[3], num_heads=num_heads)  # (size/16, size/16)
         #------------------------------------------------------------
         self.down_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(down_channel_indices, down_attn):
@@ -272,10 +267,6 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # The Middle blocks
-        #
-        # self.mid_1 = MidBlock(channels[3], channels[4], self.t_emb_dim, attention=mid_attn[0], num_heads=num_heads, )
-        # self.mid_2 = MidBlock(channels[4], channels[4], self.t_emb_dim, attention=mid_attn[1], num_heads=num_heads, )
-        # self.mid_3 = MidBlock(channels[4], channels[3], self.t_emb_dim, attention=mid_attn[2], num_heads=num_heads, )
         #------------------------------------------------------------
         self.mid_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(mid_channel_indices, mid_attn):
@@ -285,10 +276,6 @@ class UNet_Diffusion(nn.Module):
             
         #------------------------------------------------------------
         # The Decoding Up blocks
-        #
-        # self.up_2 = UpBlock(channels[3], channels[2], self.t_emb_dim, attention=up_attn[0], num_heads=num_heads) 
-        # self.up_1 = UpBlock(channels[2], channels[1], self.t_emb_dim, attention=up_attn[1], num_heads=num_heads) 
-        # self.up_0 = UpBlock(channels[1], channels[0], self.t_emb_dim, attention=up_attn[2], num_heads=num_heads) 
         #------------------------------------------------------------
         self.up_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(up_channel_indices, up_attn):
@@ -307,11 +294,6 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # Encoder
-        #
-        # enc_0 = self.down_0(out, t_emb)
-        # enc_1 = self.down_1(enc_0, t_emb)
-        # enc_2 = self.down_2(enc_1, t_emb)
-        # enc_3 = self.down_3(enc_2, t_emb)
         #------------------------------------------------------------
         tensor_in = out
         encodings = []
@@ -322,10 +304,6 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # the Center
-        #
-        # mid_out_1 = self.mid_1(enc_3, t_emb)
-        # mid_out_2 = self.mid_2(mid_out_1, t_emb)
-        # mid_out_3 = self.mid_3(mid_out_2, t_emb)
         #------------------------------------------------------------
         tensor_in = encodings[-1]
         mids = []
@@ -336,15 +314,7 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # Decoder
-        #
-        # dec_2 = self.up_2(mid_out_3, enc_2, t_emb)
-        # dec_1 = self.up_1(dec_2, enc_1, t_emb)
-        # dec_0 = self.up_0(dec_1, enc_0, t_emb)
         #------------------------------------------------------------
-        # dec_2 = self.up_blocks[0](mids[-1], encodings[-2], t_emb)
-        # dec_1 = self.up_blocks[1](dec_2,    encodings[-3], t_emb)
-        # dec_0 = self.up_blocks[2](dec_1,    encodings[-4], t_emb)
-
         tensor_in = mids[-1]
         skip_idx = -2
         decodings = []
