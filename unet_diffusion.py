@@ -83,6 +83,14 @@ class AttentionBlock(nn.Module):
             nn.Linear(inner_dim, dim),
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
+# Maybe this??
+#         self.to_out = nn.Sequential(
+#             nn.Linear(inner_dim, inner_dim),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(inner_dim, dim),
+#             nn.Dropout(dropout),
+#         ) if project_out else nn.Identity()
 
     def forward(self, x):
         b, c, h, w = x.shape
@@ -100,14 +108,14 @@ class AttentionBlock(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         out = self.to_out(out)
         out = out.transpose(1, 2).reshape(b, c, h, w)
-        return out 
-    
+        return out     
+
 
 # class AttentionBlock(nn.Module):
-#     def __init__(self, out_channels, num_heads=4, numgroups=8):
+#     def __init__(self, dim, num_heads=4, dim_head=64, numgroups=8, dropout=0.):
 #         super().__init__()
-#         self.attention_norms = nn.GroupNorm(numgroups, out_channels)
-#         self.attentions = nn.MultiheadAttention(out_channels, num_heads, batch_first=True)
+#         self.attention_norms = nn.GroupNorm(numgroups, dim)
+#         self.attentions = nn.MultiheadAttention(dim, num_heads, batch_first=True)
 
 #     def forward(self, x):
 #         out = x
@@ -119,6 +127,7 @@ class AttentionBlock(nn.Module):
 #         out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
 #         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
 #         return out_attn
+
 
 class DownBlock(nn.Module):
     """
@@ -226,7 +235,8 @@ class UNet_Diffusion(nn.Module):
         attn_dropout = config['attn_dropout']
                 
         #[64, 128, 256, 512, 1024]
-        assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
+        # assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
+        assert(channels == [32, 64, 128, 256, 512]) # temp debug code for now
    
         down_attn = config['down_attn']
         down_channel_indices = config['down_channel_indices']

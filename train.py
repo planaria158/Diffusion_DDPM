@@ -79,7 +79,7 @@ def train(args):
     #--------------------------------------------------------------------
     # LightningModule
     #--------------------------------------------------------------------
-    if train_config['restart']:
+    if train_config['checkpoint_name'] != 'None':
         print('Restarting from checkpoint')
         path = os.path.join(train_config['log_dir'], train_config['checkpoint_name'])
         model = DDPM.load_from_checkpoint(checkpoint_path=path)
