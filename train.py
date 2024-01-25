@@ -55,25 +55,29 @@ def train(args):
                                 Resize(img_size, antialias=True)
                                 ])
 
-    validation_transforms = Compose([ToDtype(torch.float32, scale=False),
-                                     Resize(img_size, antialias=True)
-                                    ])
-     
     log_param('train_transforms', train_transforms)
-    log_param('validation_transforms', validation_transforms)
 
     train_dataset = CelebA(image_dir_train, 
                            transform=train_transforms, 
                            limit_size=dataset_config['limit_size'], 
                            size_limit=dataset_config['size_limit']) 
     
-    validation_dataset = CelebA(image_dir_valid, 
-                                transform=validation_transforms, 
-                                limit_size=False, 
-                                size_limit=-1) 
-    
     train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=5, persistent_workers=True)
-    validation_loader = utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
+
+
+    if image_dir_valid != 'None':
+        validation_transforms = Compose([ToDtype(torch.float32, scale=False),
+                                        Resize(img_size, antialias=True)
+                                        ])
+        log_param('validation_transforms', validation_transforms)
+        
+        validation_dataset = CelebA(image_dir_valid, 
+                                    transform=validation_transforms, 
+                                    limit_size=False, 
+                                    size_limit=-1) 
+
+        validation_loader = utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
+
 
 # %%
     #--------------------------------------------------------------------
@@ -121,8 +125,10 @@ def train(args):
                             log_every_n_steps=train_config['log_every_nsteps'], 
                             callbacks=[checkpoint_callback]) 
 
-
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader) 
+    if image_dir_valid != 'None':
+        trainer.fit(model=model, train_dataloaders=train_loader) 
+    else:
+        trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader) 
 
     # Log the PyTorch model with the signature
     mlflow.pytorch.log_model(model, "model") #, signature=signature)
@@ -131,6 +137,7 @@ def train(args):
 
     mlflow.end_run()
     print(f"run_id: {run.info.run_id}; status: {run.info.status}")
+
 
 
 # %%

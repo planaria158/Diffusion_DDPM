@@ -1,6 +1,6 @@
 dataset_params:
   train_path: '../data/img_align_celeba/img_align_celeba/train/'
-  valid_path: '../data/img_align_celeba/img_align_celeba/valid/'
+  valid_path: None #'../data/img_align_celeba/img_align_celeba/valid/'
   limit_size: False
   size_limit: -1
 
@@ -12,15 +12,14 @@ diffusion_params:
 model_params:
   img_size : [64,64]
   time_emb_dim : 256
-  # channels : [64, 128, 256, 512, 1024]
   channels : [32, 64, 128, 256, 512]
-  down_attn: [True, True, True, True]
+  down_attn: [False, False, True, False]
   down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
 
   mid_attn:  [False, False, False]
   mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
 
-  up_attn:   [True, True, True]
+  up_attn:   [False, False, False]
   up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 4
   dim_head : 64
@@ -29,13 +28,13 @@ model_params:
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 8
-  num_epochs: 200
+  batch_size: 256
+  num_epochs: 2000
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_4/checkpoints/epoch=74-step=26775.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'
   devices: 2
-  save_top_k: 10
+  save_top_k: 5
   checkpoint_every_n_epochs: 1
   monitor: 'loss'
   mode: 'min'

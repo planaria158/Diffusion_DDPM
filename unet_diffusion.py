@@ -141,7 +141,8 @@ class DownBlock(nn.Module):
         super().__init__()
         self.attention = attention
         self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
+        if attention:
+            self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
         self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
         # Strided convolution to downsize
@@ -172,7 +173,8 @@ class MidBlock(nn.Module):
         super().__init__()
         self.attention = attention
         self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
+        if attention:
+            self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
         self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
@@ -202,7 +204,8 @@ class UpBlock(nn.Module):
         self.attention = attention
         self.up_sample_conv = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=4, stride=2, padding=1)
         self.residual_block_1 = ResidualBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock((in_channels + out_channels), num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
+        if attention:
+            self.attention_block = AttentionBlock((in_channels + out_channels), num_heads=num_heads, dim_head=dim_head, dropout=attn_dropout)
         self.residual_block_2 = ResidualBlock((in_channels + out_channels), out_channels, t_emb_dim, residual=False, dropout=dropout)  
         # self.conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
