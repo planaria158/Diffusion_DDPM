@@ -10,7 +10,7 @@ diffusion_params:
   beta_end : 0.02
 
 model_params:
-  img_size : [64,64]
+  img_size : [128,128]
   time_emb_dim : 256
   channels : [32, 64, 128, 256, 512]
   down_attn: [False, False, True, False]
@@ -21,14 +21,14 @@ model_params:
 
   up_attn:   [False, False, False]
   up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
-  num_heads : 4
+  num_heads : 8
   dim_head : 64
   dropout: 0.1 
   attn_dropout: 0.1
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 256
+  batch_size: 50
   num_epochs: 2000
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_4/checkpoints/epoch=74-step=26775.ckpt'
   log_every_nsteps: 1000

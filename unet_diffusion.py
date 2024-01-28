@@ -108,7 +108,7 @@ class AttentionBlock(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         out = self.to_out(out)
         out = out.transpose(1, 2).reshape(b, c, h, w)
-        return out     
+        return out
 
 
 # class AttentionBlock(nn.Module):
