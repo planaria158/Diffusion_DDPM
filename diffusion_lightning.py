@@ -84,8 +84,17 @@ class DDPM(LightningModule):
         noisy_imgs = self.scheduler.add_noise(imgs, noise, tstep).to(imgs)
         # Model tries to learn the noise that was added to im to make noise_im
         noise_pred = self.forward(noisy_imgs, tstep.to(imgs))
+
         # Loss is our predicted noise relative to actual noise
         loss = self.criterion(noise_pred, noise)
+
+        # I'll have to do this by hand when I'm using a weighted MSE for PP weighting
+        # terms["mse"] = mean_flat(weight * (target - model_output) ** 2)
+        # weights = self.scheduler.get_pp_weights(tstep).to(imgs)
+        # weighted_err2 = (weights * (noise - noise_pred)**2)
+        # loss = weighted_err2.mean(dim=list(range(1, len(weighted_err2.shape)))) # the weighted mean square error
+        # still needs debugging.....
+
         return loss
     
     # ---------------------------------------------------------------

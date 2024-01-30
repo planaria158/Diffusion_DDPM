@@ -29,8 +29,8 @@ model_params:
 train_params:
   log_dir: './lightning_logs/'
   batch_size: 50
-  num_epochs: 2000
-  checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_4/checkpoints/epoch=74-step=26775.ckpt'
+  num_epochs: 200
+  checkpoint_name: '/home/mark/dev/diffusion/lightning_logs/version_8/checkpoints/epoch=222-step=406752.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'
   devices: 2
@@ -38,4 +38,9 @@ train_params:
   checkpoint_every_n_epochs: 1
   monitor: 'loss'
   mode: 'min'
+
+  # Perception-prioritized weighting during training. https://arxiv.org/pdf/2204.00227.pdf
+  # p2_gamma: 0.05  
+  # p2_k : 1
+
 
