@@ -56,6 +56,7 @@ class ResidualBlock(nn.Module):
                       nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
                       nn.GroupNorm(numgroups, out_channels),
                 )
+        self.dropout = nn.Dropout2d(p=dropout)
 
     def forward(self, x, t_emb):
         out = self.in_block(x)
@@ -64,6 +65,7 @@ class ResidualBlock(nn.Module):
         if self.residual:
             out = out + x
 
+        out = self.dropout(out)
         return F.silu(out)
 
 class AttentionBlock(nn.Module):
@@ -83,14 +85,6 @@ class AttentionBlock(nn.Module):
             nn.Linear(inner_dim, dim),
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
-# Maybe this??
-#         self.to_out = nn.Sequential(
-#             nn.Linear(inner_dim, inner_dim),
-#             nn.GELU(),
-#             nn.Dropout(dropout),
-#             nn.Linear(inner_dim, dim),
-#             nn.Dropout(dropout),
-#         ) if project_out else nn.Identity()
 
     def forward(self, x):
         b, c, h, w = x.shape
