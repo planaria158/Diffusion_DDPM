@@ -63,7 +63,7 @@ class ResidualBlock(nn.Module):
         out = out + self.time_block(t_emb)[:, :, None, None]
         out = self.out_block(out)
         if self.residual:
-            out = out + x
+            out = out + x  # replace with "out + (1/sqrt(2)) * x" ?? as per the GAN literature?
 
         out = self.dropout(out)
         return F.silu(out)
@@ -147,7 +147,7 @@ class DownBlock(nn.Module):
 
         if self.attention:
             out_attn = self.attention_block(out)
-            out = out + out_attn  
+            out = out + out_attn  # ?? this a residual?  rescale as in ResidualBlock?
 
         out = self.residual_block_2(x, t_emb)
         out = self.conv(out)
@@ -231,9 +231,8 @@ class UNet_Diffusion(nn.Module):
         dropout = config['dropout']
         attn_dropout = config['attn_dropout']
                 
-        #[64, 128, 256, 512, 1024]
-        # assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
-        assert(channels == [32, 64, 128, 256, 512]) # temp debug code for now
+        assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
+        # assert(channels == [32, 64, 128, 256, 512]) # temp debug code for now
    
         down_attn = config['down_attn']
         down_channel_indices = config['down_channel_indices']

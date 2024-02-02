@@ -57,6 +57,7 @@ class DDPM(LightningModule):
         self.num_timesteps = diffusion_config['num_timesteps']
         self.beta_start = diffusion_config['beta_start']
         self.beta_end = diffusion_config['beta_end']
+        self.loss_weighting = config['loss_weighting']
         self.model = UNet_Diffusion(config)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
         self.ema = EMA()
@@ -86,14 +87,17 @@ class DDPM(LightningModule):
         noise_pred = self.forward(noisy_imgs, tstep.to(imgs))
 
         # Loss is our predicted noise relative to actual noise
-        loss = self.criterion(noise_pred, noise)
-
-        # I'll have to do this by hand when I'm using a weighted MSE for PP weighting
-        # terms["mse"] = mean_flat(weight * (target - model_output) ** 2)
-        # weights = self.scheduler.get_pp_weights(tstep).to(imgs)
-        # weighted_err2 = (weights * (noise - noise_pred)**2)
-        # loss = weighted_err2.mean(dim=list(range(1, len(weighted_err2.shape)))) # the weighted mean square error
-        # still needs debugging.....
+        if self.loss_weighting == 'PP' :
+            # PP-weighted MSE loss
+            weights = self.scheduler.get_pp_weights(tstep, normalize=False).to(imgs)
+            weights = weights/torch.max(weights)
+            err2 = (noise - noise_pred)**2
+            loss = err2.mean(dim=list(range(1, len(err2.shape))))
+            loss = (loss * weights).mean()
+            # loss = (weights * (noise - noise_pred)**2).mean() 
+        else :
+            # Standard loss function (MSE)
+            loss = self.criterion(noise_pred, noise)
 
         return loss
     
@@ -145,7 +149,7 @@ class DDPM(LightningModule):
         return
 
     def configure_optimizers(self):
-        lr = 0.0001  
+        lr = 0.00002  
         b1 = 0.5
         b2 = 0.999
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))

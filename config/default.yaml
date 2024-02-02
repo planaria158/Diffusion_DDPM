@@ -10,25 +10,30 @@ diffusion_params:
   beta_end : 0.02
 
 model_params:
-  img_size : [128,128]
-  time_emb_dim : 256
-  channels : [32, 64, 128, 256, 512]
-  down_attn: [False, False, False, True]
-  down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
+  img_size : [64,64]
+  time_emb_dim : 128 #256
+  channels : [64, 128, 256, 512, 1024]
+  # channels : [32, 64, 128, 256, 512]
+  down_attn: [False, False, True] #, False]
+  down_channel_indices: [[0,0], [0,1], [1,2]] #, [2,3]] # in, out indices into channels[] for each down layer
 
   mid_attn:  [False, False, False]
-  mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
+  mid_channel_indices: [[2,3], [3,3], [3,2]] # in, out indices into channels[] for each mid layer
+  # mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
 
-  up_attn:   [True, False, False]
-  up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
-  num_heads : 8
+  up_attn:   [True, False] #, False]
+  up_channel_indices: [[2,1], [1,0]] # in, out indices into channels[] for each up layer
+  # up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
+  num_heads : 4
   dim_head : 64
   dropout: 0.1 
   attn_dropout: 0.1
+  loss_weighting: 'PP'  # PP == perception-prioritized weighting.  None == no weighting.  
+
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 96
+  batch_size: 200
   num_epochs: 400
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_8/checkpoints/epoch=222-step=406752.ckpt'
   log_every_nsteps: 1000
@@ -38,4 +43,4 @@ train_params:
   checkpoint_every_n_epochs: 1
   monitor: 'loss'
   mode: 'min'
-
+  
