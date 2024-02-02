@@ -11,6 +11,10 @@ from torch import nn
 import pytorch_lightning as pl
 import copy
 from mlflow import log_metric, log_param
+from tqdm import tqdm
+import os
+import torchvision
+from torchvision.utils import make_grid
 from unet_diffusion import UNet_Diffusion
 from noise_scheduler import LinearNoiseScheduler
 
@@ -57,16 +61,22 @@ class DDPM(LightningModule):
         self.num_timesteps = diffusion_config['num_timesteps']
         self.beta_start = diffusion_config['beta_start']
         self.beta_end = diffusion_config['beta_end']
+        self.num_samples = diffusion_config['num_samples']
+        self.num_grid_rows = diffusion_config['num_grid_rows']
+        self.sample_epochs = diffusion_config['sample_epochs']
+        self.task_name = diffusion_config['task_name']
+
         self.loss_weighting = config['loss_weighting']
+        self.img_size = tuple(config['img_size'])
         self.model = UNet_Diffusion(config)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
         self.ema = EMA()
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
-        self.save_hyperparameters()
         self.training_epoch_total_loss = 0
         self.training_batch_count = 0
         self.validation_epoch_total_loss = 0
         self.validation_batch_count = 0
+        self.save_hyperparameters()
 
         log_param('criterion', self.criterion)
         log_param('ema_warmup', self.ema.warmup_steps)
@@ -122,6 +132,40 @@ class DDPM(LightningModule):
         log_metric("loss", avg_loss, step=self.current_epoch)
         self.training_epoch_total_loss = 0
         self.training_batch_count = 0
+
+        # Generate images periodically during training
+        if (self.current_epoch > 1) & (self.current_epoch % self.sample_epochs == 0):
+            self.sample()
+
+        return
+    
+    # Generate images
+    @torch.no_grad
+    def sample(self):
+        self.model.eval()
+        device = self.device
+        task_name = self.task_name
+
+        xt = torch.randn((self.num_samples, 3, self.img_size[0], self.img_size[1])).to(device)
+
+        for i in tqdm(reversed(range(self.num_timesteps))):
+            # Get prediction of noise
+            noise_pred = self.model(xt, torch.as_tensor(i).unsqueeze(0).to(device))            
+            # Use scheduler to get x0 and xt-1
+            xt, x0_pred = self.scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+            
+            # Save x0 every 200th time.
+            if i % 200 == 0 or (i == self.num_timesteps-1):
+                ims = torch.clamp(xt, -1., 1.).detach().cpu()
+                ims = (ims + 1) / 2
+                grid = make_grid(ims, nrow=self.num_grid_rows)
+                img = torchvision.transforms.ToPILImage()(grid)
+                if not os.path.exists(os.path.join(task_name, 'samples')):
+                    os.mkdir(os.path.join(task_name, 'samples'))
+                img.save(os.path.join(task_name, 'samples', 'x0_{}_{}.png'.format(self.current_epoch, i)))
+                img.close()
+
+        self.model.train()
         return
 
     # ---------------------------------------------------------------

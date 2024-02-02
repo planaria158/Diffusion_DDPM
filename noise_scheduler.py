@@ -70,6 +70,7 @@ class LinearNoiseScheduler:
         return (sqrt_alpha_cum_prod.to(original.device) * original
                 + sqrt_one_minus_alpha_cum_prod.to(original.device) * noise)
         
+        
     def sample_prev_timestep(self, xt, noise_pred, t):
         """
             Use the noise prediction by model to get

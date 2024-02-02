@@ -8,6 +8,10 @@ diffusion_params:
   num_timesteps : 1000
   beta_start : 0.0001
   beta_end : 0.02
+  num_samples : 36
+  num_grid_rows : 6  # i.e. 6x6 = 36 above
+  sample_epochs : 10
+  task_name : 'default'
 
 model_params:
   img_size : [64,64]
@@ -28,13 +32,13 @@ model_params:
   dim_head : 64
   dropout: 0.1 
   attn_dropout: 0.1
-  loss_weighting: 'PP'  # PP == perception-prioritized weighting.  None == no weighting.  
+  loss_weighting: None #'PP'  # PP == perception-prioritized weighting.  None == no weighting.  
 
 
 train_params:
   log_dir: './lightning_logs/'
   batch_size: 200
-  num_epochs: 400
+  num_epochs: 1000
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_8/checkpoints/epoch=222-step=406752.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'
