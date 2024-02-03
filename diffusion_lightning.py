@@ -159,9 +159,10 @@ class DDPM(LightningModule):
         ims = (ims + 1) / 2
         grid = make_grid(ims, nrow=self.num_grid_rows)
         img = torchvision.transforms.ToPILImage()(grid)
-        if not os.path.exists(os.path.join(task_name, 'samples')):
-            os.mkdir(os.path.join(task_name, 'samples'))
-        img.save(os.path.join(task_name, 'samples', 'x0_epoch_{}.png'.format(self.current_epoch)))
+        out_path = os.path.join(task_name, 'samples') 
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+        img.save(os.path.join(out_path, 'x0_epoch_{}.png'.format(self.current_epoch)))
         img.close()
 
         self.model.train()
