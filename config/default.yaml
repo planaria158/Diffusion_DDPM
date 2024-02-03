@@ -10,24 +10,21 @@ diffusion_params:
   beta_end : 0.02
   num_samples : 36
   num_grid_rows : 6  # i.e. 6x6 = 36 above
-  sample_epochs : 10
+  sample_epochs : 20
   task_name : 'default'
 
 model_params:
   img_size : [64,64]
-  time_emb_dim : 128 #256
-  channels : [64, 128, 256, 512, 1024]
-  # channels : [32, 64, 128, 256, 512]
-  down_attn: [False, False, True] #, False]
-  down_channel_indices: [[0,0], [0,1], [1,2]] #, [2,3]] # in, out indices into channels[] for each down layer
+  time_emb_dim : 64 #128 #256
+  channels : [32, 64, 128, 256, 512]
+  down_attn: [False, True, False, False]
+  down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
 
   mid_attn:  [False, False, False]
-  mid_channel_indices: [[2,3], [3,3], [3,2]] # in, out indices into channels[] for each mid layer
-  # mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
+  mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
 
-  up_attn:   [True, False] #, False]
-  up_channel_indices: [[2,1], [1,0]] # in, out indices into channels[] for each up layer
-  # up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
+  up_attn:   [False, False, False]
+  up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 4
   dim_head : 64
   dropout: 0.1 
@@ -37,7 +34,7 @@ model_params:
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 200
+  batch_size: 110
   num_epochs: 1000
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_8/checkpoints/epoch=222-step=406752.ckpt'
   log_every_nsteps: 1000

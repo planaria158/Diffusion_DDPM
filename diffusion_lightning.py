@@ -139,7 +139,7 @@ class DDPM(LightningModule):
 
         return
     
-    # Generate images
+    # Generate a grid of diffusion images
     @torch.no_grad
     def sample(self):
         self.model.eval()
@@ -154,16 +154,15 @@ class DDPM(LightningModule):
             # Use scheduler to get x0 and xt-1
             xt, x0_pred = self.scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
             
-            # Save x0 every 200th time.
-            if i % 200 == 0 or (i == self.num_timesteps-1):
-                ims = torch.clamp(xt, -1., 1.).detach().cpu()
-                ims = (ims + 1) / 2
-                grid = make_grid(ims, nrow=self.num_grid_rows)
-                img = torchvision.transforms.ToPILImage()(grid)
-                if not os.path.exists(os.path.join(task_name, 'samples')):
-                    os.mkdir(os.path.join(task_name, 'samples'))
-                img.save(os.path.join(task_name, 'samples', 'x0_{}_{}.png'.format(self.current_epoch, i)))
-                img.close()
+        # Save final predicted image Xo to file.
+        ims = torch.clamp(xt, -1., 1.).detach().cpu()
+        ims = (ims + 1) / 2
+        grid = make_grid(ims, nrow=self.num_grid_rows)
+        img = torchvision.transforms.ToPILImage()(grid)
+        if not os.path.exists(os.path.join(task_name, 'samples')):
+            os.mkdir(os.path.join(task_name, 'samples'))
+        img.save(os.path.join(task_name, 'samples', 'x0_epoch_{}.png'.format(self.current_epoch)))
+        img.close()
 
         self.model.train()
         return

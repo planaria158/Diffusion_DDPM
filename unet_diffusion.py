@@ -231,8 +231,7 @@ class UNet_Diffusion(nn.Module):
         dropout = config['dropout']
         attn_dropout = config['attn_dropout']
                 
-        assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
-        # assert(channels == [32, 64, 128, 256, 512]) # temp debug code for now
+        assert(channels == [32, 64, 128, 256, 512]) # debug code for now
    
         down_attn = config['down_attn']
         down_channel_indices = config['down_channel_indices']
