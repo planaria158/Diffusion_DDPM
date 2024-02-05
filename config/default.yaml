@@ -10,13 +10,13 @@ diffusion_params:
   beta_end : 0.02
   num_samples : 36
   num_grid_rows : 6  # i.e. 6x6 = 36 above
-  sample_epochs : 20
+  sample_epochs : 10
   task_name : 'default'
 
 model_params:
   img_size : [64,64]
-  time_emb_dim : 64 #128 #256
-  channels : [32, 64, 128, 256, 512]
+  time_emb_dim : 256
+  channels : [32, 64, 128, 256, 512]  
   down_attn: [False, True, False, False]
   down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
 
@@ -35,7 +35,7 @@ model_params:
 train_params:
   log_dir: './lightning_logs/'
   batch_size: 110
-  num_epochs: 1000
+  num_epochs: 2000
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_8/checkpoints/epoch=222-step=406752.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'

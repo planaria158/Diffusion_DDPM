@@ -97,17 +97,17 @@ class DDPM(LightningModule):
         noise_pred = self.forward(noisy_imgs, tstep.to(imgs))
 
         # Loss is our predicted noise relative to actual noise
-        if self.loss_weighting == 'PP' :
-            # PP-weighted MSE loss
-            weights = self.scheduler.get_pp_weights(tstep, normalize=False).to(imgs)
-            weights = weights/torch.max(weights)
-            err2 = (noise - noise_pred)**2
-            loss = err2.mean(dim=list(range(1, len(err2.shape))))
-            loss = (loss * weights).mean()
-            # loss = (weights * (noise - noise_pred)**2).mean() 
-        else :
-            # Standard loss function (MSE)
-            loss = self.criterion(noise_pred, noise)
+        # if self.loss_weighting == 'PP' :
+        #     # PP-weighted MSE loss
+        #     weights = self.scheduler.get_pp_weights(tstep, normalize=False).to(imgs)
+        #     weights = weights/torch.max(weights)
+        #     err2 = (noise - noise_pred)**2
+        #     loss = err2.mean(dim=list(range(1, len(err2.shape))))
+        #     loss = (loss * weights).mean()
+        #     # loss = (weights * (noise - noise_pred)**2).mean() 
+        # else :
+        # Standard loss function (MSE)
+        loss = self.criterion(noise_pred, noise)
 
         return loss
     
@@ -135,7 +135,9 @@ class DDPM(LightningModule):
 
         # Generate images periodically during training
         if (self.current_epoch > 1) & (self.current_epoch % self.sample_epochs == 0):
-            self.sample()
+            # only run on a single gpu
+            if torch.cuda.current_device() == 0:
+                self.sample()
 
         return
     
@@ -193,7 +195,7 @@ class DDPM(LightningModule):
         return
 
     def configure_optimizers(self):
-        lr = 0.00002  
+        lr = 0.00001
         b1 = 0.5
         b2 = 0.999
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
