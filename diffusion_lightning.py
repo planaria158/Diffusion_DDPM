@@ -72,10 +72,6 @@ class DDPM(LightningModule):
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
         self.ema = EMA()
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
-        self.training_epoch_total_loss = 0
-        self.training_batch_count = 0
-        self.validation_epoch_total_loss = 0
-        self.validation_batch_count = 0
         self.save_hyperparameters()
 
         log_param('criterion', self.criterion)
@@ -116,9 +112,7 @@ class DDPM(LightningModule):
     # ---------------------------------------------------------------
     def training_step(self, batch, batch_idx):
         loss = self.common_forward(batch)
-        self.log_dict({"loss": loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
-        self.training_epoch_total_loss += loss
-        self.training_batch_count += 1
+        self.log_dict({"loss": loss}, on_epoch=True, on_step=True, prog_bar=True, sync_dist=True)
         return loss
     
     def on_train_batch_end(self, outputs, batch, batch_idx):
@@ -127,24 +121,19 @@ class DDPM(LightningModule):
         return
 
     def on_train_epoch_end(self):
-        # do something with all training_step outputs, for example:
-        avg_loss = self.training_epoch_total_loss/self.training_batch_count
-        log_metric("loss", avg_loss, step=self.current_epoch)
-        self.training_epoch_total_loss = 0
-        self.training_batch_count = 0
-
         # Generate images periodically during training
         if (self.current_epoch > 1) & (self.current_epoch % self.sample_epochs == 0):
             # only run on a single gpu
             if torch.cuda.current_device() == 0:
-                self.sample()
-
+                self._sample()
         return
     
     # Generate a grid of diffusion images
-    @torch.no_grad
-    def sample(self):
+    def _sample(self):
+        # disable grads + batchnorm + dropout
+        torch.set_grad_enabled(False)
         self.model.eval()
+
         device = self.device
         task_name = self.task_name
 
@@ -166,7 +155,8 @@ class DDPM(LightningModule):
             os.makedirs(out_path)
         img.save(os.path.join(out_path, 'x0_epoch_{}.png'.format(self.current_epoch)))
         img.close()
-
+        # enable grads + batchnorm + dropout
+        torch.set_grad_enabled(True)
         self.model.train()
         return
 
@@ -176,17 +166,8 @@ class DDPM(LightningModule):
     def validation_step(self, batch, batch_idx):
         val_loss = self.common_forward(batch)
         self.log_dict({"val_loss": val_loss}, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
-        self.validation_epoch_total_loss += val_loss
-        self.validation_batch_count += 1
         return val_loss
     
-    def on_validation_end(self):
-        avg_loss = self.validation_epoch_total_loss/self.validation_batch_count
-        log_metric("val_loss", avg_loss, step=self.current_epoch)
-        self.validation_epoch_total_loss = 0
-        self.validation_batch_count = 0
-
-
     def on_load_checkpoint(self, checkpoint):
         print("\nRestarting from checkpoint")
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
@@ -195,7 +176,7 @@ class DDPM(LightningModule):
         return
 
     def configure_optimizers(self):
-        lr = 0.00001
+        lr = 0.0001
         b1 = 0.5
         b2 = 0.999
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
