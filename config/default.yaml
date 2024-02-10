@@ -10,7 +10,7 @@ diffusion_params:
   beta_end : 0.02
   num_samples : 36
   num_grid_rows : 6  # i.e. 6x6 = 36 above
-  sample_epochs : 5 #10
+  sample_epochs : 10
   task_name : 'default'
 
 model_params:

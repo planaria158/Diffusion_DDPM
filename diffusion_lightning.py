@@ -120,13 +120,13 @@ class DDPM(LightningModule):
         self.ema.step_ema(self.ema_model, self.model)
         return
 
-    def on_train_epoch_end(self):
-        # Generate images periodically during training
-        if (self.current_epoch > 1) & (self.current_epoch % self.sample_epochs == 0):
-            # only run on a single gpu
-            if torch.cuda.current_device() == 0:
-                self._sample()
-        return
+    # def on_train_epoch_end(self):
+    #     # Generate images periodically during training
+    #     if (self.current_epoch > 1) & (self.current_epoch % self.sample_epochs == 0):
+    #         # only run on a single gpu
+    #         if torch.cuda.current_device() == 0:
+    #             self._sample()
+    #     return
     
     # Generate a grid of diffusion images
     def _sample(self):
