@@ -126,9 +126,9 @@ def train(args):
                             callbacks=[checkpoint_callback]) 
 
     if image_dir_valid != 'None':
-        trainer.fit(model=model, train_dataloaders=train_loader) 
-    else:
         trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader) 
+    else:
+        trainer.fit(model=model, train_dataloaders=train_loader) 
 
     # Log the PyTorch model with the signature
     mlflow.pytorch.log_model(model, "model") #, signature=signature)

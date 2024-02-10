@@ -134,6 +134,8 @@ class DDPM(LightningModule):
         torch.set_grad_enabled(False)
         self.model.eval()
 
+        # Use the EMA model:  self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
+
         device = self.device
         task_name = self.task_name
 
