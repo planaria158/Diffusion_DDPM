@@ -27,14 +27,14 @@ model_params:
   up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 4
   dim_head : 32
-  dropout: 0.1 
+  dropout: 0.
   attn_dropout: 0.1
   loss_weighting: None #'PP'  # PP == perception-prioritized weighting.  None == no weighting.  
 
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 64
+  batch_size: 60
   num_epochs: 2000
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_22/checkpoints/epoch=57-step=165300.ckpt'
   log_every_nsteps: 1000

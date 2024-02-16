@@ -62,7 +62,12 @@ def train(args):
                            limit_size=dataset_config['limit_size'], 
                            size_limit=dataset_config['size_limit']) 
     
-    train_loader = utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=5, persistent_workers=True)
+    train_loader = utils.data.DataLoader(train_dataset, 
+                                         batch_size=batch_size, 
+                                         shuffle=True, 
+                                         num_workers=5, 
+                                         drop_last=True, 
+                                         persistent_workers=True)
 
 
     if image_dir_valid != 'None':

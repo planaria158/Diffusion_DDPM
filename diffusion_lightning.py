@@ -70,7 +70,7 @@ class DDPM(LightningModule):
         self.img_size = tuple(config['img_size'])
         self.model = UNet_Diffusion(config)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
-        self.ema = EMA()
+        self.ema = EMA(beta=0.9999) 
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
 
@@ -120,21 +120,19 @@ class DDPM(LightningModule):
         self.ema.step_ema(self.ema_model, self.model)
         return
 
-    # def on_train_epoch_end(self):
-    #     # Generate images periodically during training
-    #     if (self.current_epoch > 1) & (self.current_epoch % self.sample_epochs == 0):
-    #         # only run on a single gpu
-    #         if torch.cuda.current_device() == 0:
-    #             self._sample()
-    #     return
+    def on_train_epoch_end(self):
+        # Generate images periodically during training
+        if (self.current_epoch > 1) & (self.current_epoch % self.sample_epochs == 0):
+            # only run on a single gpu
+            if torch.cuda.current_device() == 0:
+                self._sample()
+        return
     
     # Generate a grid of diffusion images
     def _sample(self):
         # disable grads + batchnorm + dropout
-        torch.set_grad_enabled(False)
-        self.model.eval()
-
-        # Use the EMA model:  self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
+        # torch.set_grad_enabled(False)
+        # self.model.eval()
 
         device = self.device
         task_name = self.task_name
@@ -143,7 +141,7 @@ class DDPM(LightningModule):
 
         for i in tqdm(reversed(range(self.num_timesteps))):
             # Get prediction of noise
-            noise_pred = self.model(xt, torch.as_tensor(i).unsqueeze(0).to(device))            
+            noise_pred = self.ema_model(xt, torch.as_tensor(i).unsqueeze(0).to(device))            
             # Use scheduler to get x0 and xt-1
             xt, x0_pred = self.scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
             
@@ -158,8 +156,8 @@ class DDPM(LightningModule):
         img.save(os.path.join(out_path, 'x0_epoch_{}.png'.format(self.current_epoch)))
         img.close()
         # enable grads + batchnorm + dropout
-        torch.set_grad_enabled(True)
-        self.model.train()
+        # torch.set_grad_enabled(True)
+        # self.model.train()
         return
 
     # ---------------------------------------------------------------
