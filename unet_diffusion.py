@@ -75,7 +75,6 @@ class ResidualBlock(nn.Module):
         self.residual = residual
         self.in_block = nn.Sequential(
                     nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1),
-                    # nn.Dropout2d(p=dropout),
                     nn.GroupNorm(numgroups, in_channels),
                     nn.SiLU(),
             )
@@ -85,7 +84,7 @@ class ResidualBlock(nn.Module):
             )
         self.out_block = nn.Sequential(
                     nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
-                    # nn.Dropout2d(p=dropout),
+                    nn.Dropout2d(p=dropout),
                     nn.GroupNorm(numgroups, out_channels),
                 )
 
@@ -256,7 +255,7 @@ class UNet_Diffusion(nn.Module):
         num_heads = config['num_heads']
         channels = config['channels']
                 
-        assert(channels == [32, 64, 128, 256, 512]) # temp debug code for now
+        assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
    
         down_attn = config['down_attn']
         down_channel_indices = config['down_channel_indices']

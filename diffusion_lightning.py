@@ -130,10 +130,7 @@ class DDPM(LightningModule):
     
     # Generate a grid of diffusion images
     def _sample(self):
-        # disable grads + batchnorm + dropout
-        # torch.set_grad_enabled(False)
-        # self.model.eval()
-
+        # use self.ema_model since it's already set to eval, grad_not_required
         device = self.device
         task_name = self.task_name
 
@@ -155,9 +152,6 @@ class DDPM(LightningModule):
             os.makedirs(out_path)
         img.save(os.path.join(out_path, 'x0_epoch_{}.png'.format(self.current_epoch)))
         img.close()
-        # enable grads + batchnorm + dropout
-        # torch.set_grad_enabled(True)
-        # self.model.train()
         return
 
     # ---------------------------------------------------------------
