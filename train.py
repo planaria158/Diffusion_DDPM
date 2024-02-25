@@ -122,13 +122,15 @@ def train(args):
                             max_epochs=train_config['num_epochs'], 
                             logger=logger, 
                             log_every_n_steps=train_config['log_every_nsteps'], 
-                            callbacks=[checkpoint_callback]) 
+                            callbacks=[checkpoint_callback],
+                            accumulate_grad_batches=train_config['accumulate_grad_batches']) 
     else:
         trainer = pl.Trainer(accelerator=train_config['accelerator'], 
                             max_epochs=train_config['num_epochs'], 
                             logger=logger, 
                             log_every_n_steps=train_config['log_every_nsteps'], 
-                            callbacks=[checkpoint_callback]) 
+                            callbacks=[checkpoint_callback],
+                            accumulate_grad_batches=train_config['accumulate_grad_batches']) 
 
     if image_dir_valid != 'None':
         trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader) 

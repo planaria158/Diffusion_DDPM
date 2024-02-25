@@ -1,0 +1,40 @@
+
+1. Train with no dropout included (./lightning_logs/version_25, 250 epochs)
+
+2. Train with dropout added just to Attention block.  (./lightning_logs/version_26, 250 epochs)
+
+3. Now add dropout to the residual block and run experiment again. (./lightning_logs/version_27)
+   (results are pure crap)  2/18/24
+
+4. Re-run #2 with larger image size: [96,96],  2/18/24  (./version_28)
+    maybe need more channels??
+
+5. Repeat #4 but increase channel count to : [64, 128, 256, 512, 1024]  (./lightning_logs/version_29)
+    looks much better.
+
+6. Make a movie of the image prediction trajectory...
+
+7. Train 128x128 image size, use accumulate_grad_batches=10 in the Trainer to compensate for smaller batch sizes.
+   (./lightning_logs/version_30) : converges faster than 128x128 and 64x64.  Ran for 100 epochs and results look good.
+
+8. 
+
+9. Look at loss per time step from fully trained model.
+
+8. Try mixed precision training again....
+
+9. Try cosine schedule (Improved Denoising Diffusion Probabilistic Models)
+
+10. Assuming good quality results, create 50K generated images and calculate FID score.
+
+11. Try DDIM image generation (DENOISING DIFFUSION IMPLICIT MODELS): http://arxiv.org/abs/2010.02502
+
+12. Look at loss per time step from fully trained model.
+
+
+Long-term:
+1. Implement DiT : diffusion transformer architecture (used in Sora, for example)
+   http://arxiv.org/abs/2212.09748
+
+
+

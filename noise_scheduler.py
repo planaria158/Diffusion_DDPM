@@ -71,14 +71,17 @@ class LinearNoiseScheduler:
                 + sqrt_one_minus_alpha_cum_prod.to(original.device) * noise)
         
 
-    def sample_prev_timestep(self, xt, noise_pred, t):
+    #
+    #  Sampling using Denoising Diffusion Probabilistic Model (DDPM) sampling strategy.
+    #  Ho et. al. http://arxiv.org/abs/2006.11239
+    def sample_prev_timestep_ddpm(self, xt, noise_pred, t):
         """
             Use the noise prediction by model to get
             xt-1 using xt and the noise predicted
-        :param xt: current timestep sample
-        :param noise_pred: model noise prediction
-        :param t: current timestep we are at
-        :return:
+        xt: current timestep sample
+        noise_pred: model noise prediction
+        t: current timestep we are at
+        returns: a denoised image
         """
         x0 = (xt - (self.sqrt_one_minus_alpha_cum_prod[t] * noise_pred)) / torch.sqrt(self.alpha_cum_prod[t])
         x0 = torch.clamp(x0, -1., 1.)
@@ -99,3 +102,42 @@ class LinearNoiseScheduler:
             # sigma = variance ** 0.5
             # z = torch.randn(xt.shape).to(xt.device)
             return mean + sigma*z, x0
+        
+    #
+    #  Sampling using Denoising Diffusion Implicit Model (DDIM) sampling strategy.
+    #  Song et. al. http://arxiv.org/abs/2010.02502    
+    def sample_prev_timestep_ddim(self, xt, noise_pred, t):
+        """
+            Use the noise prediction by model to get
+            xt-1 using xt and the noise predicted
+        xt: current timestep sample
+        noise_pred: model noise prediction
+        t: current timestep we are at
+        sigma: hyperparam [0,1]
+        returns: a denoised image
+        """
+
+        x0 = (xt - (self.sqrt_one_minus_alpha_cum_prod[t] * noise_pred)) / torch.sqrt(self.alpha_cum_prod[t])
+        x0 = torch.clamp(x0, -1., 1.)
+
+        mean = xt - ((self.betas[t])*noise_pred)/(self.sqrt_one_minus_alpha_cum_prod[t])
+        mean = mean / torch.sqrt(self.alphas[t])
+        
+        if t == 0:
+            return x0
+        else:
+            x0 =  torch.sqrt(self.alpha_cum_prod[t-1]) * x0
+            x0 = torch.clamp(x0, -1., 1.)
+            xt_m1 = x0 + (self.sqrt_one_minus_alpha_cum_prod[t-1] * noise_pred)
+            return xt_m1
+        
+            # variance = (1-self.alpha_cum_prod[t-1]) / (1.0 - self.alpha_cum_prod[t])
+            # variance = variance * self.betas[t]
+            # sigma = variance ** 0.5
+            # z = torch.randn(xt.shape).to(xt.device)
+            
+            # # OR
+            # # variance = self.betas[t]
+            # # sigma = variance ** 0.5
+            # # z = torch.randn(xt.shape).to(xt.device)
+            # return mean + sigma*z, x0        

@@ -61,11 +61,13 @@ class DDPM(LightningModule):
         self.num_timesteps = diffusion_config['num_timesteps']
         self.beta_start = diffusion_config['beta_start']
         self.beta_end = diffusion_config['beta_end']
+
+        # settings for periodic sampling of the reverse process to generate images
         self.num_samples = diffusion_config['num_samples']
         self.num_grid_rows = diffusion_config['num_grid_rows']
         self.sample_epochs = diffusion_config['sample_epochs']
         self.task_name = diffusion_config['task_name']
-
+        
         self.loss_weighting = config['loss_weighting']
         self.img_size = tuple(config['img_size'])
         self.model = UNet_Diffusion(config)
@@ -140,7 +142,7 @@ class DDPM(LightningModule):
             # Get prediction of noise
             noise_pred = self.ema_model(xt, torch.as_tensor(i).unsqueeze(0).to(device))            
             # Use scheduler to get x0 and xt-1
-            xt, x0_pred = self.scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+            xt, x0_pred = self.scheduler.sample_prev_timestep_ddpm(xt, noise_pred, torch.as_tensor(i).to(device))
             
         # Save final predicted image Xo to file.
         ims = torch.clamp(xt, -1., 1.).detach().cpu()
