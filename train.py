@@ -10,6 +10,7 @@ import argparse
 from torch import utils
 from torch import nn
 import pytorch_lightning as pl
+from lightning.pytorch.strategies import DDPStrategy
 from torchvision.transforms.v2 import Resize, Compose, ToDtype, RandomHorizontalFlip 
 
 from celeba_dataset import CelebA

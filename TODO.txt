@@ -17,11 +17,9 @@
 7. Train 128x128 image size, use accumulate_grad_batches=10 in the Trainer to compensate for smaller batch sizes.
    (./lightning_logs/version_30) : converges faster than 128x128 and 64x64.  Ran for 100 epochs and results look good.
 
-8. 
+8. Train 256x256 image size (./lightning_logs/version_32)
 
-9. Look at loss per time step from fully trained model.
-
-8. Try mixed precision training again....
+8a. Try a UNet++ version of the model.
 
 9. Try cosine schedule (Improved Denoising Diffusion Probabilistic Models)
 
@@ -30,6 +28,8 @@
 11. Try DDIM image generation (DENOISING DIFFUSION IMPLICIT MODELS): http://arxiv.org/abs/2010.02502
 
 12. Look at loss per time step from fully trained model.
+
+8. Try mixed precision training again....
 
 
 Long-term:

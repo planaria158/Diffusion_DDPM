@@ -255,7 +255,7 @@ class UNet_Diffusion(nn.Module):
         num_heads = config['num_heads']
         channels = config['channels']
                 
-        assert(channels == [32, 64, 128, 256, 512, 1024]) # temp debug code for now
+        assert(channels == [32, 64, 128, 256, 512, 728]) # temp debug code for now
    
         down_attn = config['down_attn']
         down_channel_indices = config['down_channel_indices']
