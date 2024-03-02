@@ -37,7 +37,7 @@ train_params:
   batch_size: 12
   accumulate_grad_batches: 20
   num_epochs: 500
-  checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_31/checkpoints/epoch=12-step=4641.ckpt'
+  checkpoint_name: '/home/mark/dev/diffusion/lightning_logs/version_32/checkpoints/epoch=26-step=10260.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'
   devices: 2

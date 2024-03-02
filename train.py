@@ -1,5 +1,5 @@
 
-# %%
+
 import os
 import torch
 import yaml
@@ -16,8 +16,8 @@ from torchvision.transforms.v2 import Resize, Compose, ToDtype, RandomHorizontal
 from celeba_dataset import CelebA
 from diffusion_lightning import DDPM
 
+# mlflow.pytorch.autolog()
 
-# %%
 def train(args):
 
     mlflow.set_experiment(experiment_name='DDPM_test_training')
@@ -40,7 +40,6 @@ def train(args):
     model_config = config['model_params']
     train_config = config['train_params']
 
-# %%
     #--------------------------------------------------------------------
     # Dataset, Dataloader
     #--------------------------------------------------------------------
@@ -84,8 +83,6 @@ def train(args):
 
         validation_loader = utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
 
-
-# %%
     #--------------------------------------------------------------------
     # LightningModule
     #--------------------------------------------------------------------
@@ -101,7 +98,6 @@ def train(args):
     print('Model has:', int(total_params//1e6), 'M parameters')
     log_param('model_parameter_count', total_params)
 
-# %%
     #--------------------------------------------------------------------
     # Training
     #--------------------------------------------------------------------
@@ -147,8 +143,6 @@ def train(args):
     print(f"run_id: {run.info.run_id}; status: {run.info.status}")
 
 
-
-# %%
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for ddpm training')
     parser.add_argument('--config', dest='config_path',

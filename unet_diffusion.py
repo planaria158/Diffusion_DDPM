@@ -133,6 +133,42 @@ class ResidualBlock(nn.Module):
 #         out = out.transpose(1, 2).reshape(b, c, h, w)
 #         return out 
     
+# class AttentionBlock(nn.Module):
+#     def __init__(self, dim, num_heads=4, dim_head=64, numgroups=8, dropout=0.):  
+#         super().__init__()        
+#         inner_dim = dim_head * num_heads
+#         # dim_head = dim // num_heads
+#         # inner_dim = dim 
+#         project_out = not (num_heads == 1 and dim_head == dim)
+#         self.heads = num_heads
+#         self.attention_norm = nn.GroupNorm(numgroups, dim)
+#         self.scale = float(dim_head) ** -0.5
+#         self.attend = nn.Softmax(dim = -1)
+#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+#         self.attn_dropout = nn.Dropout(dropout)
+#         self.to_out = nn.Sequential(
+#             nn.Linear(inner_dim, dim),
+#             nn.Dropout(dropout)
+#         ) if project_out else nn.Identity()
+
+#     def forward(self, x):
+#         b, c, h, w = x.shape
+#         in_attn = x.reshape(b, c, h * w)
+#         # GroupNorm applies only to the c channels, so the dimensions of the tensor 
+#         # after that is probably not important either way
+#         in_attn = self.attention_norm(in_attn) 
+#         in_attn = in_attn.transpose(1,2)
+#         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
+#         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+#         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+#         attn = self.attend(dots)
+#         attn = self.attn_dropout(attn)
+#         out = torch.matmul(attn, v)
+#         out = rearrange(out, 'b h n d -> b n (h d)')
+#         out = self.to_out(out)
+#         out = out.transpose(1, 2).reshape(b, c, h, w)
+#         return out    
+    
 class AttentionBlock(nn.Module):
     def __init__(self, out_channels, num_heads=4, numgroups=8, dropout=0.):
         super().__init__()
@@ -254,6 +290,10 @@ class UNet_Diffusion(nn.Module):
         self.t_emb_dim = config['time_emb_dim']
         num_heads = config['num_heads']
         channels = config['channels']
+        dim_head = config['num_heads']
+        dropout = config['dropout']
+        attn_dropout = config['attn_dropout']
+
                 
         assert(channels == [32, 64, 128, 256, 512, 728]) # temp debug code for now
    
@@ -297,7 +337,7 @@ class UNet_Diffusion(nn.Module):
         self.down_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(down_channel_indices, down_attn):
             self.down_blocks.append(DownBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, 
-                                              num_heads=num_heads, dropout=config['dropout'], attn_dropout=config['attn_dropout']))
+                                              num_heads=num_heads, dropout=dropout, attn_dropout=attn_dropout))
 
         #------------------------------------------------------------
         # The Middle blocks
@@ -309,7 +349,7 @@ class UNet_Diffusion(nn.Module):
         self.mid_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(mid_channel_indices, mid_attn):
             self.mid_blocks.append(MidBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, 
-                                            num_heads=num_heads, dropout=config['dropout'], attn_dropout=config['attn_dropout']))
+                                            num_heads=num_heads, dropout=dropout, attn_dropout=attn_dropout))
             
         #------------------------------------------------------------
         # The Decoding Up blocks
@@ -321,7 +361,7 @@ class UNet_Diffusion(nn.Module):
         self.up_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(up_channel_indices, up_attn):
             self.up_blocks.append(UpBlock(channels[in_idx], channels[out_idx], self.t_emb_dim, attention=attn, 
-                                          num_heads=num_heads, dropout=config['dropout'], attn_dropout=config['attn_dropout']))
+                                          num_heads=num_heads, dropout=dropout, attn_dropout=attn_dropout))
         
 
     def forward(self, x, t):

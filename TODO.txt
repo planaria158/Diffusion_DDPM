@@ -4,7 +4,7 @@
 2. Train with dropout added just to Attention block.  (./lightning_logs/version_26, 250 epochs)
 
 3. Now add dropout to the residual block and run experiment again. (./lightning_logs/version_27)
-   (results are pure crap)  2/18/24
+   (results are pure crap)  2/18/24  Note this was Dropout2D (drops out entire channels, not just pixels)
 
 4. Re-run #2 with larger image size: [96,96],  2/18/24  (./version_28)
     maybe need more channels??
@@ -17,19 +17,23 @@
 7. Train 128x128 image size, use accumulate_grad_batches=10 in the Trainer to compensate for smaller batch sizes.
    (./lightning_logs/version_30) : converges faster than 128x128 and 64x64.  Ran for 100 epochs and results look good.
 
-8. Train 256x256 image size (./lightning_logs/version_32)
+8. Train 256x256 image size (./lightning_logs/version_32, restarted and continued in /version_33)
+   Ran for ~140 epochs. Final training loss = 0.072
+   Result: meh!  Faces rendered quite good, few if any deformities, but background colors incorrect, and resolution is grainy.
 
-8a. Try a UNet++ version of the model.
+9. 
 
-9. Try cosine schedule (Improved Denoising Diffusion Probabilistic Models)
+- Try cosine schedule (Improved Denoising Diffusion Probabilistic Models)
 
-10. Assuming good quality results, create 50K generated images and calculate FID score.
+- Try a UNet++ version of the model.
 
-11. Try DDIM image generation (DENOISING DIFFUSION IMPLICIT MODELS): http://arxiv.org/abs/2010.02502
+- Assuming good quality results, create 50K generated images and calculate FID score.
 
-12. Look at loss per time step from fully trained model.
+- Try DDIM image generation (DENOISING DIFFUSION IMPLICIT MODELS): http://arxiv.org/abs/2010.02502
 
-8. Try mixed precision training again....
+- Look at loss per time step from fully trained model.
+
+- Try mixed precision training again....
 
 
 Long-term:
