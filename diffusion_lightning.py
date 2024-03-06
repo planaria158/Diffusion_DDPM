@@ -72,7 +72,7 @@ class DDPM(LightningModule):
         self.img_size = tuple(config['img_size'])
         self.model = UNet_Diffusion(config)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
-        self.ema = EMA(beta=0.9999) 
+        self.ema = EMA(beta=0.9999, warmup=2000) 
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
 

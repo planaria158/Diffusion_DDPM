@@ -21,7 +21,29 @@
    Ran for ~140 epochs. Final training loss = 0.072
    Result: meh!  Faces rendered quite good, few if any deformities, but background colors incorrect, and resolution is grainy.
 
-9. 
+9. 3/2/2024: Retry 256x256 with different settings.  Basically, more channels & one-fewer layer
+   channels : [64, 128, 256, 512, 1024]
+   down_attn: [False, False, False, True]  # for img_size : [256,256], attn at 32x32
+   down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
+   mid_attn:  [False, True, False] # for img_size : [256,256], attn at 16x6
+   mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
+   up_attn:   [True, False, False] # for img_size : [256,256], attn at 32x32
+   up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
+
+   batch size is now 6 and accumulate_grad_batches=32
+   Also, I added back in Dropout to Residual Blocks (but pixel dropout, not dropout2d)
+   Also, added mlflow.pytorch.autolog() to train.py
+
+   Stopped after 12 epochs.  Way TOO SLOW
+
+10. Rerun #7 above to re-establish results.
+    batch_size: 16
+    accumulate_grad_batches: 16
+
+
+
+- 128x128 with only 32x32 attention (or only 16x16 attention)
+  
 
 - Try cosine schedule (Improved Denoising Diffusion Probabilistic Models)
 

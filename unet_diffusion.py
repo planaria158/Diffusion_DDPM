@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
+
+
 def get_time_embedding(time_steps, temb_dim):
     r"""
     Convert time steps tensor into an embedding using the
@@ -75,6 +77,7 @@ class ResidualBlock(nn.Module):
         self.residual = residual
         self.in_block = nn.Sequential(
                     nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1),
+                    # nn.Dropout(p=dropout, inplace=False),
                     nn.GroupNorm(numgroups, in_channels),
                     nn.SiLU(),
             )
@@ -84,7 +87,7 @@ class ResidualBlock(nn.Module):
             )
         self.out_block = nn.Sequential(
                     nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
-                    nn.Dropout(p=dropout, inplace=False),
+                    # nn.Dropout(p=dropout, inplace=False),
                     nn.GroupNorm(numgroups, out_channels),
                 )
 
@@ -108,7 +111,7 @@ class ResidualBlock(nn.Module):
 #         self.attention_norm = nn.GroupNorm(numgroups, dim)
 #         self.scale = float(dim_head) ** -0.5
 #         self.attend = nn.Softmax(dim = -1)
-#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)    use Conv2d instead of Linear????
 #         self.attn_dropout = nn.Dropout(dropout)
 #         self.to_out = nn.Sequential(
 #             nn.Linear(inner_dim, dim),
@@ -144,7 +147,7 @@ class ResidualBlock(nn.Module):
 #         self.attention_norm = nn.GroupNorm(numgroups, dim)
 #         self.scale = float(dim_head) ** -0.5
 #         self.attend = nn.Softmax(dim = -1)
-#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)  use Conv2d instead of Linear????
 #         self.attn_dropout = nn.Dropout(dropout)
 #         self.to_out = nn.Sequential(
 #             nn.Linear(inner_dim, dim),
@@ -295,7 +298,7 @@ class UNet_Diffusion(nn.Module):
         attn_dropout = config['attn_dropout']
 
                 
-        assert(channels == [32, 64, 128, 256, 512, 728]) # temp debug code for now
+        assert(channels == [64, 128, 256, 512, 1024]) # temp debug code for now
    
         down_attn = config['down_attn']
         down_channel_indices = config['down_channel_indices']

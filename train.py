@@ -16,8 +16,6 @@ from torchvision.transforms.v2 import Resize, Compose, ToDtype, RandomHorizontal
 from celeba_dataset import CelebA
 from diffusion_lightning import DDPM
 
-# mlflow.pytorch.autolog()
-
 def train(args):
 
     mlflow.set_experiment(experiment_name='DDPM_test_training')
@@ -128,6 +126,12 @@ def train(args):
                             log_every_n_steps=train_config['log_every_nsteps'], 
                             callbacks=[checkpoint_callback],
                             accumulate_grad_batches=train_config['accumulate_grad_batches']) 
+
+
+    # mlflow.pytorch.autolog(log_every_n_epoch=1, log_models=True, log_datasets=True,  
+    #                        registered_model_name="DDPM", checkpoint=True, 
+    #                        checkpoint_monitor='loss', checkpoint_mode='min', 
+    #                        checkpoint_save_best_only=True, checkpoint_save_freq='epoch')
 
     if image_dir_valid != 'None':
         trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader) 

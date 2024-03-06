@@ -8,36 +8,36 @@ diffusion_params:
   num_timesteps : 1000
   beta_start : 0.0001
   beta_end : 0.02
-  num_samples : 16
-  num_grid_rows : 4  # i.e. 6x6 = 36 above
+  num_samples : 49
+  num_grid_rows : 7  
   sample_epochs : 5
   task_name : 'default'
 
 model_params:
-  img_size : [256,256]
+  img_size : [128,128]
   time_emb_dim : 256
-  channels : [32, 64, 128, 256, 512, 728]
-  down_attn: [False, False, False, True, True]  # for img_size : [256,256], attn at 32x32, 16x16
-  down_channel_indices: [[0,0], [0,1], [1,2], [2,3], [3,4]] # in, out indices into channels[] for each down layer
+  channels : [64, 128, 256, 512, 1024]  
+  down_attn: [False, False, True, True]  # for img_size : [128,128], attn at 32x32 and 16x16
+  down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
 
   mid_attn:  [False, False, False]
-  mid_channel_indices: [[4,5], [5,5], [5,4]] # in, out indices into channels[] for each mid layer
+  mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
 
-  up_attn:   [True, True, False, False] # for img_size : [256,256], attn at 32x32, 16x16
-  up_channel_indices: [[4,3], [3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
+  up_attn:   [True, True, False] # img_size : [128,128], attn at 32x32 and 16x16
+  up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 4
   dim_head : 32
-  dropout: 0.
+  dropout: 0.0
   attn_dropout: 0.1
   loss_weighting: None #'PP'  # PP == perception-prioritized weighting.  None == no weighting.  
 
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 12
-  accumulate_grad_batches: 20
-  num_epochs: 500
-  checkpoint_name: '/home/mark/dev/diffusion/lightning_logs/version_32/checkpoints/epoch=26-step=10260.ckpt'
+  batch_size: 16
+  accumulate_grad_batches: 1
+  num_epochs: 100
+  checkpoint_name: '/home/mark/dev/diffusion/lightning_logs/version_36/checkpoints/epoch=34-step=12495.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'
   devices: 2
