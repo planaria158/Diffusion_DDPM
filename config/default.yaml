@@ -17,13 +17,13 @@ model_params:
   img_size : [128,128]
   time_emb_dim : 256
   channels : [64, 128, 256, 512, 1024]  
-  down_attn: [False, False, True, True]  # for img_size : [128,128], attn at 32x32 and 16x16
+  down_attn: [True, True, True, True]  # for img_size : [128,128], attn at 32x32 and 16x16
   down_channel_indices: [[0,0], [0,1], [1,2], [2,3]] # in, out indices into channels[] for each down layer
 
-  mid_attn:  [False, False, False]
+  mid_attn:  [True, True, True]
   mid_channel_indices: [[3,4], [4,4], [4,3]] # in, out indices into channels[] for each mid layer
 
-  up_attn:   [True, True, False] # img_size : [128,128], attn at 32x32 and 16x16
+  up_attn:   [True, True, True] # img_size : [128,128], attn at 32x32 and 16x16
   up_channel_indices: [[3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 4
   dim_head : 32
@@ -36,8 +36,8 @@ train_params:
   log_dir: './lightning_logs/'
   batch_size: 16
   accumulate_grad_batches: 1
-  num_epochs: 100
-  checkpoint_name: '/home/mark/dev/diffusion/lightning_logs/version_36/checkpoints/epoch=34-step=12495.ckpt'
+  num_epochs: 300
+  checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_36/checkpoints/epoch=34-step=12495.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'
   devices: 2

@@ -111,7 +111,7 @@ def train(args):
 
     # Note: I tried to run in single and mixed-precision; both produced NANs.
     if train_config['accelerator'] == 'gpu':
-        trainer = pl.Trainer(strategy='ddp_find_unused_parameters_true', 
+        trainer = pl.Trainer(strategy='ddp', #'ddp_find_unused_parameters_true', 
                             accelerator=train_config['accelerator'], 
                             devices=train_config['devices'], 
                             max_epochs=train_config['num_epochs'], 

@@ -4,3 +4,4 @@ __pycache__
 diffusion.code-workspace
 nohup.out
 default
+mlartifacts/

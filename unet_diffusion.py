@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-
+from torch import nn, einsum
 
 
 def get_time_embedding(time_steps, temb_dim):
@@ -102,41 +102,6 @@ class ResidualBlock(nn.Module):
 
 
 # class AttentionBlock(nn.Module):
-#     def __init__(self, dim, num_heads=4, numgroups=8, dropout=0.):  
-#         super().__init__()
-#         dim_head = dim // num_heads
-#         inner_dim = dim #dim_head *  num_heads
-#         project_out = not (num_heads == 1 and dim_head == dim)
-#         self.heads = num_heads
-#         self.attention_norm = nn.GroupNorm(numgroups, dim)
-#         self.scale = float(dim_head) ** -0.5
-#         self.attend = nn.Softmax(dim = -1)
-#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)    use Conv2d instead of Linear????
-#         self.attn_dropout = nn.Dropout(dropout)
-#         self.to_out = nn.Sequential(
-#             nn.Linear(inner_dim, dim),
-#             nn.Dropout(dropout)
-#         ) if project_out else nn.Identity()
-
-#     def forward(self, x):
-#         b, c, h, w = x.shape
-#         in_attn = x.reshape(b, c, h * w)
-#         # GroupNorm applies only to the c channels, so the dimensions of the tensor 
-#         # after that is probably not important either way
-#         in_attn = self.attention_norm(in_attn) 
-#         in_attn = in_attn.transpose(1,2)
-#         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
-#         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
-#         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-#         attn = self.attend(dots)
-#         attn = self.attn_dropout(attn)
-#         out = torch.matmul(attn, v)
-#         out = rearrange(out, 'b h n d -> b n (h d)')
-#         out = self.to_out(out)
-#         out = out.transpose(1, 2).reshape(b, c, h, w)
-#         return out 
-    
-# class AttentionBlock(nn.Module):
 #     def __init__(self, dim, num_heads=4, dim_head=64, numgroups=8, dropout=0.):  
 #         super().__init__()        
 #         inner_dim = dim_head * num_heads
@@ -148,10 +113,10 @@ class ResidualBlock(nn.Module):
 #         self.scale = float(dim_head) ** -0.5
 #         self.attend = nn.Softmax(dim = -1)
 #         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)  use Conv2d instead of Linear????
-#         self.attn_dropout = nn.Dropout(dropout)
+#         self.attn_dropout = nn.Dropout(dropout)  Don't do dropout
 #         self.to_out = nn.Sequential(
-#             nn.Linear(inner_dim, dim),
-#             nn.Dropout(dropout)
+#             nn.Linear(inner_dim, dim),  can use conv2d instead of Linear
+#             nn.Dropout(dropout)   Don't do dropout
 #         ) if project_out else nn.Identity()
 
 #     def forward(self, x):
@@ -165,29 +130,87 @@ class ResidualBlock(nn.Module):
 #         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
 #         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
 #         attn = self.attend(dots)
-#         attn = self.attn_dropout(attn)
+#         attn = self.attn_dropout(attn)  Don't do dropout
 #         out = torch.matmul(attn, v)
 #         out = rearrange(out, 'b h n d -> b n (h d)')
 #         out = self.to_out(out)
 #         out = out.transpose(1, 2).reshape(b, c, h, w)
 #         return out    
     
-class AttentionBlock(nn.Module):
-    def __init__(self, out_channels, num_heads=4, numgroups=8, dropout=0.):
+class Attention(nn.Module):
+    def __init__(self, dim, heads=4, dim_head=32, numgroups=8):
         super().__init__()
-        self.attention_norms = nn.GroupNorm(numgroups, out_channels)
-        self.attentions = nn.MultiheadAttention(out_channels, num_heads, dropout=dropout, batch_first=True)
+        self.scale = dim_head**-0.5
+        self.heads = heads
+        hidden_dim = dim_head * heads
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
+        self.to_out = nn.Conv2d(hidden_dim, dim, 1)
+        self.norm = nn.GroupNorm(numgroups, dim)
 
     def forward(self, x):
-        out = x
-        # Attention block of Unet
-        batch_size, channels, h, w = out.shape
-        in_attn = out.reshape(batch_size, channels, h * w)
-        in_attn = self.attention_norms(in_attn)
-        in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
-        out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
-        out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
-        return out_attn
+        b, c, h, w = x.shape
+        x = self.norm(x)
+        qkv = self.to_qkv(x).chunk(3, dim=1)
+        q, k, v = map(
+            lambda t: rearrange(t, "b (h c) x y -> b h c (x y)", h=self.heads), qkv
+        )
+        q = q * self.scale
+
+        sim = einsum("b h d i, b h d j -> b h i j", q, k)
+        sim = sim - sim.amax(dim=-1, keepdim=True).detach()
+        attn = sim.softmax(dim=-1)
+
+        out = einsum("b h i j, b h d j -> b h i d", attn, v)
+        out = rearrange(out, "b h (x y) d -> b (h d) x y", x=h, y=w)
+        return self.to_out(out)
+
+class LinearAttention(nn.Module):
+    def __init__(self, dim, heads=4, dim_head=32, numgroups=8):
+        super().__init__()
+        self.scale = dim_head**-0.5
+        self.heads = heads
+        hidden_dim = dim_head * heads
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
+
+        self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, dim, 1),
+                                    nn.GroupNorm(1, dim))
+        self.norm = nn.GroupNorm(numgroups, dim)
+
+    def forward(self, x):
+        b, c, h, w = x.shape
+        x = self.norm(x)
+        qkv = self.to_qkv(x).chunk(3, dim=1)
+        q, k, v = map(
+            lambda t: rearrange(t, "b (h c) x y -> b h c (x y)", h=self.heads), qkv
+        )
+
+        q = q.softmax(dim=-2)
+        k = k.softmax(dim=-1)
+
+        q = q * self.scale
+        context = torch.einsum("b h d n, b h e n -> b h d e", k, v)
+
+        out = torch.einsum("b h d e, b h d n -> b h e n", context, q)
+        out = rearrange(out, "b h c (x y) -> b (h c) x y", h=self.heads, x=h, y=w)
+        return self.to_out(out)
+    
+
+# class AttentionBlock(nn.Module):
+#     def __init__(self, out_channels, num_heads=4, numgroups=8, dropout=0.):
+#         super().__init__()
+#         self.attention_norms = nn.GroupNorm(numgroups, out_channels)
+#         self.attentions = nn.MultiheadAttention(out_channels, num_heads, dropout=dropout, batch_first=True)
+
+#     def forward(self, x):
+#         out = x
+#         # Attention block of Unet
+#         batch_size, channels, h, w = out.shape
+#         in_attn = out.reshape(batch_size, channels, h * w)
+#         in_attn = self.attention_norms(in_attn)
+#         in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
+#         out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
+#         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
+#         return out_attn
 
 
 class DownBlock(nn.Module):
@@ -202,7 +225,7 @@ class DownBlock(nn.Module):
         super().__init__()
         self.attention = attention
         self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dropout=attn_dropout)
+        self.attention_block = LinearAttention(in_channels, heads=num_heads)
         self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
         # Strided convolution to downsize
@@ -233,7 +256,7 @@ class MidBlock(nn.Module):
         super().__init__()
         self.attention = attention
         self.residual_block_1 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock(in_channels, num_heads=num_heads, dropout=attn_dropout)
+        self.attention_block = Attention(in_channels, heads=num_heads)
         self.residual_block_2 = ResidualBlock(in_channels, in_channels, t_emb_dim, dropout=dropout)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
@@ -263,7 +286,7 @@ class UpBlock(nn.Module):
         self.attention = attention
         self.up_sample_conv = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=4, stride=2, padding=1)
         self.residual_block_1 = ResidualBlock((in_channels + out_channels), (in_channels + out_channels), t_emb_dim, dropout=dropout)
-        self.attention_block = AttentionBlock((in_channels + out_channels), num_heads=num_heads, dropout=attn_dropout)
+        self.attention_block = LinearAttention((in_channels + out_channels), heads=num_heads)
         self.residual_block_2 = ResidualBlock((in_channels + out_channels), out_channels, t_emb_dim, residual=False, dropout=dropout)  
         # self.conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
 
@@ -331,11 +354,6 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # The Encoding down blocks. Input image = (size, size)
-        #
-        # self.down_0 = DownBlock(nb_filter[0], nb_filter[0], self.t_emb_dim, attention=down_attn[0], num_heads=num_heads)  # (size/2,  size/2)
-        # self.down_1 = DownBlock(nb_filter[0], nb_filter[1], self.t_emb_dim, attention=down_attn[1], num_heads=num_heads)  # (size/4,  size/4)
-        # self.down_2 = DownBlock(nb_filter[1], nb_filter[2], self.t_emb_dim, attention=down_attn[2], num_heads=num_heads)  # (size/8,  size/8)
-        # self.down_3 = DownBlock(nb_filter[2], nb_filter[3], self.t_emb_dim, attention=down_attn[3], num_heads=num_heads)  # (size/16, size/16)
         #------------------------------------------------------------
         self.down_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(down_channel_indices, down_attn):
@@ -344,10 +362,6 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # The Middle blocks
-        #
-        # self.mid_1 = MidBlock(channels[3], channels[4], self.t_emb_dim, attention=mid_attn[0], num_heads=num_heads, )
-        # self.mid_2 = MidBlock(channels[4], channels[4], self.t_emb_dim, attention=mid_attn[1], num_heads=num_heads, )
-        # self.mid_3 = MidBlock(channels[4], channels[3], self.t_emb_dim, attention=mid_attn[2], num_heads=num_heads, )
         #------------------------------------------------------------
         self.mid_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(mid_channel_indices, mid_attn):
@@ -356,10 +370,6 @@ class UNet_Diffusion(nn.Module):
             
         #------------------------------------------------------------
         # The Decoding Up blocks
-        #
-        # self.up_2 = UpBlock(channels[3], channels[2], self.t_emb_dim, attention=up_attn[0], num_heads=num_heads) 
-        # self.up_1 = UpBlock(channels[2], channels[1], self.t_emb_dim, attention=up_attn[1], num_heads=num_heads) 
-        # self.up_0 = UpBlock(channels[1], channels[0], self.t_emb_dim, attention=up_attn[2], num_heads=num_heads) 
         #------------------------------------------------------------
         self.up_blocks = nn.ModuleList()
         for (in_idx, out_idx), attn in zip(up_channel_indices, up_attn):
