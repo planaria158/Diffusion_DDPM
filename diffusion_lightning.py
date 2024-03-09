@@ -68,7 +68,6 @@ class DDPM(LightningModule):
         self.sample_epochs = diffusion_config['sample_epochs']
         self.task_name = diffusion_config['task_name']
         
-        self.loss_weighting = config['loss_weighting']
         self.img_size = tuple(config['img_size'])
         self.model = UNet_Diffusion(config)
         self.scheduler = LinearNoiseScheduler(self.num_timesteps, self.beta_start, self.beta_end)
@@ -94,19 +93,7 @@ class DDPM(LightningModule):
         # Model tries to learn the noise that was added to im to make noise_im
         noise_pred = self.forward(noisy_imgs, tstep.to(imgs))
 
-        # Loss is our predicted noise relative to actual noise
-        # if self.loss_weighting == 'PP' :
-        #     # PP-weighted MSE loss
-        #     weights = self.scheduler.get_pp_weights(tstep, normalize=False).to(imgs)
-        #     weights = weights/torch.max(weights)
-        #     err2 = (noise - noise_pred)**2
-        #     loss = err2.mean(dim=list(range(1, len(err2.shape))))
-        #     loss = (loss * weights).mean()
-        #     # loss = (weights * (noise - noise_pred)**2).mean() 
-        # else :
-        # Standard loss function (MSE)
         loss = self.criterion(noise_pred, noise)
-
         return loss
     
     # ---------------------------------------------------------------
