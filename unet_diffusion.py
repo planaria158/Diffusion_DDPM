@@ -197,10 +197,6 @@ class AttentionBlock(nn.Module):
 class DownBlock(nn.Module):
     """
     Down conv block with attention.
-    Sequence of following block
-    1. Residual block with time embedding x 2
-    2. Attention block
-    3. Downsample strided convolution
     """
     def __init__(self, in_channels, out_channels, t_emb_dim, attention_type, num_heads=4, dim_head=32, dropout=0, attn_dropout=0):
         super().__init__()
@@ -226,10 +222,6 @@ class DownBlock(nn.Module):
 class MidBlock(nn.Module):
     """
     Mid conv block with attention.
-    Sequence of following blocks
-    1. Residual block with time embedding
-    2. Attention block
-    3. Residual block with time embedding
     """
     def __init__(self, in_channels, out_channels, t_emb_dim, attention_type, num_heads=4, dim_head=32, dropout=0, attn_dropout=0):
         super().__init__()
@@ -252,11 +244,6 @@ class MidBlock(nn.Module):
 class UpBlock(nn.Module):
     """
     Up conv block with attention.
-    Sequence of following blocks
-    1. Upsample
-    1. Concatenate Down block output
-    2. Residual block with time embedding
-    3. Attention Block
     """
     def __init__(self, in_channels, out_channels, t_emb_dim, attention_type, num_heads=4, dim_head=32, dropout=0, attn_dropout=0):
         super().__init__()
@@ -281,8 +268,6 @@ class UpBlock(nn.Module):
 #--------------------------------------------------------------------
 # The full model
 # Assumes input images are rgb, 3 channel
-#
-#  Code from Jan 12th checkin
 #--------------------------------------------------------------------
 class UNet_Diffusion(nn.Module):
     def __init__(self, config):
@@ -396,10 +381,6 @@ class UNet_Diffusion(nn.Module):
         # dec_1 = self.up_1(dec_2, enc_1, t_emb)
         # dec_0 = self.up_0(dec_1, enc_0, t_emb)
         #------------------------------------------------------------
-        # dec_2 = self.up_blocks[0](mids[-1], encodings[-2], t_emb)
-        # dec_1 = self.up_blocks[1](dec_2,    encodings[-3], t_emb)
-        # dec_0 = self.up_blocks[2](dec_1,    encodings[-4], t_emb)
-
         tensor_in = mids[-1]
         skip_idx = -1
         decodings = []
