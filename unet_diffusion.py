@@ -4,7 +4,6 @@ https://arxiv.org/pdf/1807.10165.pdf
 https://arxiv.org/pdf/1912.05074v2.pdf
 
 This UNet is modified for use as a diffusion model.  It contains the time embeddings layers.
-
 """
 
 import math
@@ -68,42 +67,6 @@ class ResidualBlock(nn.Module):
         return F.silu(out)
 
 
-# class AttentionBlock(nn.Module):
-#     def __init__(self, dim, num_heads=4, dim_head=64, numgroups=8, dropout=0.):  
-#         super().__init__()        
-#         inner_dim = dim_head * num_heads
-#         # dim_head = dim // num_heads
-#         # inner_dim = dim 
-#         project_out = not (num_heads == 1 and dim_head == dim)
-#         self.heads = num_heads
-#         self.attention_norm = nn.GroupNorm(numgroups, dim)
-#         self.scale = float(dim_head) ** -0.5
-#         self.attend = nn.Softmax(dim = -1)
-#         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)  use Conv2d instead of Linear????
-#         self.attn_dropout = nn.Dropout(dropout)  Don't do dropout
-#         self.to_out = nn.Sequential(
-#             nn.Linear(inner_dim, dim),  can use conv2d instead of Linear
-#             nn.Dropout(dropout)   Don't do dropout
-#         ) if project_out else nn.Identity()
-
-#     def forward(self, x):
-#         b, c, h, w = x.shape
-#         in_attn = x.reshape(b, c, h * w)
-#         # GroupNorm applies only to the c channels, so the dimensions of the tensor 
-#         # after that is probably not important either way
-#         in_attn = self.attention_norm(in_attn) 
-#         in_attn = in_attn.transpose(1,2)
-#         qkv = self.to_qkv(in_attn).chunk(3, dim = -1)
-#         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
-#         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-#         attn = self.attend(dots)
-#         attn = self.attn_dropout(attn)  Don't do dropout
-#         out = torch.matmul(attn, v)
-#         out = rearrange(out, 'b h n d -> b n (h d)')
-#         out = self.to_out(out)
-#         out = out.transpose(1, 2).reshape(b, c, h, w)
-#         return out    
-    
 class Attention(nn.Module):
     def __init__(self, dim, heads=4, dim_head=32, numgroups=8):
         super().__init__()
@@ -138,9 +101,7 @@ class LinearAttention(nn.Module):
         self.heads = heads
         hidden_dim = dim_head * heads
         self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias=False)
-
-        self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, dim, 1),
-                                    nn.GroupNorm(1, dim))
+        self.to_out = nn.Sequential(nn.Conv2d(hidden_dim, dim, 1), nn.GroupNorm(1, dim))
         self.norm = nn.GroupNorm(numgroups, dim)
 
     def forward(self, x):
@@ -209,10 +170,8 @@ class DownBlock(nn.Module):
 
     def forward(self, x, t_emb):
         out = self.residual_block_1(x, t_emb)
-
         out_attn = self.attention_block(out)
         out = out + out_attn  
-
         out = self.residual_block_2(out, t_emb)
         skip_out = self.conv(out)
         out = self.down_sample_conv(skip_out)
@@ -232,10 +191,8 @@ class MidBlock(nn.Module):
 
     def forward(self, x, t_emb):
         out = self.residual_block_1(x, t_emb) 
-
         out_attn = self.attention_block(out)
         out = out + out_attn  
-
         out = self.residual_block_2(out, t_emb)        
         out = self.conv(out)
         return out
@@ -257,10 +214,8 @@ class UpBlock(nn.Module):
         x = self.up_sample_conv(x)
         out = torch.cat([x, out_down], dim=1)  # add in the skip connection from corresponding DownBlock
         out = self.residual_block_1(out, t_emb)        
-
         out_attn = self.attention_block(out)
         out = out + out_attn  
-
         out = self.residual_block_2(out, t_emb)        
         out = self.conv(out)
         return F.silu(out)

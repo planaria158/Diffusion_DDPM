@@ -53,6 +53,10 @@ class EMA:
         ema_model.load_state_dict(model.state_dict())
 
 
+"""
+    DDPM model is a pytorch lightning module that acts as a harness
+    to train the underlying UNet_Diffusion model. 
+"""
 class DDPM(LightningModule):
     def __init__(self, config, diffusion_config, **kwargs):
         super().__init__()
