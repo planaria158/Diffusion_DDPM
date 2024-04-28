@@ -234,6 +234,7 @@ class UNet_Diffusion(nn.Module):
         dim_head = config['dim_head']
         dropout = config['dropout']
         attn_dropout = config['attn_dropout']
+        self.config = config
                 
         assert(channels == [32, 64, 128, 256, 512]) # temp debug code for now
    
@@ -264,7 +265,6 @@ class UNet_Diffusion(nn.Module):
         self.conv_out_1 = nn.Conv2d(channels[0], channels[0]//2, kernel_size=3, padding=1)
         self.norm_out_1 = nn.GroupNorm(8, channels[0]//2)
         self.conv_out_2 = nn.Conv2d(channels[0]//2, 3, kernel_size=1, padding=0)
-
 
         #------------------------------------------------------------
         # The Encoding down blocks. Input image = (size, size)
@@ -346,7 +346,7 @@ class UNet_Diffusion(nn.Module):
             skip_idx -= 1
 
         # Last output layers
-        out = self.norm_out(decodings[-1])        
+        out = self.norm_out(decodings[-1])  
         out = F.silu(out)
         out = self.conv_out_1(out)
         out = self.norm_out_1(out)

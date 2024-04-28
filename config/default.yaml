@@ -14,16 +14,16 @@ diffusion_params:
   task_name : 'default'
 
 model_params:
-  img_size : [128,128]
+  img_size : [64,64]
   time_emb_dim : 256
   channels : [32, 64, 128, 256, 512]  
-  down_attn_type: ['linear', 'linear', 'linear', 'full']  
+  down_attn_type: ['linear', 'linear', 'full', 'full']  
   down_channel_indices: [[0,1], [1,2], [2,3], [3,4]] # in, out indices into channels[] for each down layer
 
   mid_attn_type:  ['full']
   mid_channel_indices: [[4,4]] # in, out indices into channels[] for each mid layer
 
-  up_attn_type:   ['full', 'linear', 'linear', 'linear'] 
+  up_attn_type:   ['full', 'full', 'linear', 'linear'] 
   up_channel_indices: [[4,3], [3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 6
   dim_head : 32
@@ -33,7 +33,7 @@ model_params:
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 18
+  batch_size: 96
   accumulate_grad_batches: 1
   num_epochs: 500
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_43/checkpoints/epoch=2-step=45585.ckpt'

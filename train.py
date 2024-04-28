@@ -4,8 +4,8 @@ import os
 import torch
 import yaml
 import mlflow
-from mlflow import log_metric, log_artifact, log_params, log_param
-from mlflow.models.signature import infer_signature
+# from mlflow import log_metric, log_artifact, log_params, log_param
+# from mlflow.models.signature import infer_signature
 import argparse
 from torch import utils
 from torch import nn
@@ -18,8 +18,8 @@ from diffusion_lightning import DDPM
 
 def train(args):
 
-    mlflow.set_experiment(experiment_name='DDPM_test_training')
-    run = mlflow.start_run()
+    # mlflow.set_experiment(experiment_name='DDPM_test_training')
+    # run = mlflow.start_run()
 
     #--------------------------------------------------------------------
     # Read config
@@ -31,7 +31,7 @@ def train(args):
             print(exc)
 
     print(config)
-    log_params(config)
+    # log_params(config)
 
     diffusion_config = config['diffusion_params']
     dataset_config = config['dataset_params']
@@ -53,7 +53,7 @@ def train(args):
                                 Resize(img_size, antialias=True)
                                 ])
 
-    log_param('train_transforms', train_transforms)
+    # log_param('train_transforms', train_transforms)
 
     train_dataset = CelebA(image_dir_train, 
                            transform=train_transforms, 
@@ -72,7 +72,7 @@ def train(args):
         validation_transforms = Compose([ToDtype(torch.float32, scale=False),
                                         Resize(img_size, antialias=True)
                                         ])
-        log_param('validation_transforms', validation_transforms)
+        # log_param('validation_transforms', validation_transforms)
         
         validation_dataset = CelebA(image_dir_valid, 
                                     transform=validation_transforms, 
@@ -94,7 +94,7 @@ def train(args):
 
     total_params = sum(param.numel() for param in model.parameters())
     print('Model has:', int(total_params//1e6), 'M parameters')
-    log_param('model_parameter_count', total_params)
+    # log_param('model_parameter_count', total_params)
 
     #--------------------------------------------------------------------
     # Training
@@ -118,7 +118,8 @@ def train(args):
                             logger=logger, 
                             log_every_n_steps=train_config['log_every_nsteps'], 
                             callbacks=[checkpoint_callback],
-                            accumulate_grad_batches=train_config['accumulate_grad_batches']) 
+                            accumulate_grad_batches=train_config['accumulate_grad_batches'],
+                            precision="16-mixed") 
     else:
         trainer = pl.Trainer(accelerator=train_config['accelerator'], 
                             max_epochs=train_config['num_epochs'], 
@@ -139,12 +140,12 @@ def train(args):
         trainer.fit(model=model, train_dataloaders=train_loader) 
 
     # Log the PyTorch model with the signature
-    mlflow.pytorch.log_model(model, "model") #, signature=signature)
+    # mlflow.pytorch.log_model(model, "model") #, signature=signature)
 
     print('\n\nTraining complete!')
 
-    mlflow.end_run()
-    print(f"run_id: {run.info.run_id}; status: {run.info.status}")
+    # mlflow.end_run()
+    # print(f"run_id: {run.info.run_id}; status: {run.info.status}")
 
 
 if __name__ == '__main__':

@@ -46,5 +46,4 @@ class CelebA(Dataset):
         if self.target_transform:
             label = self.target_transform(label)
 
-        # return image.float(), image.float()  
-        return image.float(), image.float() 
+        return image.float(), image.float()  

@@ -10,7 +10,7 @@ from pytorch_lightning.core import LightningModule
 from torch import nn
 import pytorch_lightning as pl
 import copy
-from mlflow import log_metric, log_param
+# from mlflow import log_metric, log_param
 from tqdm import tqdm
 import os
 import torchvision
@@ -79,9 +79,9 @@ class DDPM(LightningModule):
         self.ema_model = copy.deepcopy(self.model).eval().requires_grad_(False)
         self.save_hyperparameters()
 
-        log_param('criterion', self.criterion)
-        log_param('ema_warmup', self.ema.warmup_steps)
-        log_param('ema_beta', self.ema.beta)
+        # log_param('criterion', self.criterion)
+        # log_param('ema_warmup', self.ema.warmup_steps)
+        # log_param('ema_beta', self.ema.beta)
 
     def forward(self, noisy_im, t):
         return self.model(noisy_im, t)
@@ -89,7 +89,7 @@ class DDPM(LightningModule):
     def common_forward(self, batch):
         imgs = batch[0]
         # Random noise
-        noise = torch.randn_like(imgs) 
+        noise = torch.randn_like(imgs)
         # Timestep
         tstep = torch.randint(0, self.num_timesteps, (imgs.shape[0],)) 
         # Add noise to images according to timestep
@@ -167,10 +167,10 @@ class DDPM(LightningModule):
         b1 = 0.5
         b2 = 0.999
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
-        log_param('optimizer', optimizer)
-        log_param('Adam_lr', lr)
-        log_param('Adam_b1', b1)
-        log_param('Adam_b2', b2)
+        # log_param('optimizer', optimizer)
+        # log_param('Adam_lr', lr)
+        # log_param('Adam_b1', b1)
+        # log_param('Adam_b2', b2)
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.9)
         return [optimizer] #, [scheduler]
 
