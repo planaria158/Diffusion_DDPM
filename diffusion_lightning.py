@@ -1,10 +1,7 @@
 #--------------------------------------------------------------------
-#
 # DDPM Diffusion Model
 # as a pytorch lightning module.
-#
 #--------------------------------------------------------------------
-
 import torch
 from pytorch_lightning.core import LightningModule
 from torch import nn
@@ -71,6 +68,8 @@ class DDPM(LightningModule):
         self.num_grid_rows = diffusion_config['num_grid_rows']
         self.sample_epochs = diffusion_config['sample_epochs']
         self.task_name = diffusion_config['task_name']
+        print('Sample generated images saved to folder:', self.task_name)
+        print('This job\'s global rank:', self.global_rank)
         
         self.img_size = tuple(config['img_size'])
         self.model = UNet_Diffusion(config)
@@ -116,9 +115,10 @@ class DDPM(LightningModule):
     def on_train_epoch_end(self):
         # Generate images periodically during training
         if (self.current_epoch % self.sample_epochs == 0):
-            # only run on a single gpu
-            if torch.cuda.current_device() == 0:
+            # only run on the job's primary gpu (if it's multi-gpu)
+            if self.global_rank == 0:
                 self._sample()
+            # if torch.cuda.current_device() == 0:
         return
     
     # Generate a grid of diffusion images
@@ -163,15 +163,10 @@ class DDPM(LightningModule):
         return
 
     def configure_optimizers(self):
-        lr = 0.0001
-        b1 = 0.5
-        b2 = 0.999
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=(b1, b2))
-        # log_param('optimizer', optimizer)
-        # log_param('Adam_lr', lr)
-        # log_param('Adam_b1', b1)
-        # log_param('Adam_b2', b2)
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.9)
-        return [optimizer] #, [scheduler]
+        lr = self.config['learning_rate']
+        optimizer = torch.optim.AdamW(self.model.parameters(), betas=self.config['betas'], lr=lr)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=self.config['lr_gamma'])
+        return [optimizer], [scheduler]
+
 
  

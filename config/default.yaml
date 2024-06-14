@@ -11,19 +11,19 @@ diffusion_params:
   num_samples : 49
   num_grid_rows : 7 
   sample_epochs : 2
-  task_name : 'default'
+  task_name : 'default_full_precision'
 
 model_params:
   img_size : [64,64]
   time_emb_dim : 256
   channels : [32, 64, 128, 256, 512]  
-  down_attn_type: ['linear', 'linear', 'full', 'full']  
+  down_attn_type: ['linear', 'full', 'full', 'full']  
   down_channel_indices: [[0,1], [1,2], [2,3], [3,4]] # in, out indices into channels[] for each down layer
 
   mid_attn_type:  ['full']
   mid_channel_indices: [[4,4]] # in, out indices into channels[] for each mid layer
 
-  up_attn_type:   ['full', 'full', 'linear', 'linear'] 
+  up_attn_type:   ['full', 'full', 'full', 'linear'] 
   up_channel_indices: [[4,3], [3,2], [2,1], [1,0]] # in, out indices into channels[] for each up layer
   num_heads : 6
   dim_head : 32
@@ -33,15 +33,20 @@ model_params:
 
 train_params:
   log_dir: './lightning_logs/'
-  batch_size: 96
+  batch_size: 32
   accumulate_grad_batches: 1
   num_epochs: 500
   checkpoint_name: None #'/home/mark/dev/diffusion/lightning_logs/version_43/checkpoints/epoch=2-step=45585.ckpt'
   log_every_nsteps: 1000
   accelerator: 'gpu'
-  devices: 2
-  save_top_k: 10
+  device_ids: '1'
+  save_top_k: 2
   checkpoint_every_n_epochs: 1
   monitor: 'loss'
   mode: 'min'
+  precision: '32-true'  # '16-mixed' or '32-true'
+  learning_rate : 0.0001
+  lr_gamma: 0.9985     # for exponential learning rate decay
+  betas : [0.9, 0.95]
+
   

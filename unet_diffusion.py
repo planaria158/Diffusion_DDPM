@@ -94,6 +94,7 @@ class Attention(nn.Module):
         out = rearrange(out, "b h (x y) d -> b (h d) x y", x=h, y=w)
         return self.to_out(out)
 
+
 class LinearAttention(nn.Module):
     def __init__(self, dim, heads=4, dim_head=32, numgroups=8):
         super().__init__()
@@ -122,23 +123,6 @@ class LinearAttention(nn.Module):
         out = rearrange(out, "b h c (x y) -> b (h c) x y", h=self.heads, x=h, y=w)
         return self.to_out(out)
     
-
-# class AttentionBlock(nn.Module):
-#     def __init__(self, out_channels, num_heads=4, numgroups=8, dropout=0.):
-#         super().__init__()
-#         self.attention_norms = nn.GroupNorm(numgroups, out_channels)
-#         self.attentions = nn.MultiheadAttention(out_channels, num_heads, dropout=dropout, batch_first=True)
-
-#     def forward(self, x):
-#         out = x
-#         # Attention block of Unet
-#         batch_size, channels, h, w = out.shape
-#         in_attn = out.reshape(batch_size, channels, h * w)
-#         in_attn = self.attention_norms(in_attn)
-#         in_attn = in_attn.transpose(1, 2)    #So, I guess: [N, (h*w), C] where (h*w) is the target "sequence length", and C is the embedding dimension
-#         out_attn, _ = self.attentions(in_attn, in_attn, in_attn)
-#         out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
-#         return out_attn
 
 class AttentionBlock(nn.Module):
     def __init__(self, attention_type, dim, heads, dim_head):
@@ -236,7 +220,7 @@ class UNet_Diffusion(nn.Module):
         attn_dropout = config['attn_dropout']
         self.config = config
                 
-        assert(channels == [32, 64, 128, 256, 512]) # temp debug code for now
+        assert(channels == [32, 64, 128, 256, 512]) # temporary debug code for now
    
         down_attn_type = config['down_attn_type']
         down_channel_indices = config['down_channel_indices']
@@ -301,11 +285,11 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # Encoder
-        #
-        # enc_0 = self.down_0(out, t_emb)
-        # enc_1 = self.down_1(enc_0, t_emb)
-        # enc_2 = self.down_2(enc_1, t_emb)
-        # enc_3 = self.down_3(enc_2, t_emb)
+        # e.g.
+        #     enc_0 = self.down_0(out, t_emb)
+        #     enc_1 = self.down_1(enc_0, t_emb)
+        #     enc_2 = self.down_2(enc_1, t_emb)
+        #     enc_3 = self.down_3(enc_2, t_emb)
         #------------------------------------------------------------
         tensor_in = out
         skip_connections = []
@@ -331,10 +315,10 @@ class UNet_Diffusion(nn.Module):
 
         #------------------------------------------------------------
         # Decoder
-        #
-        # dec_2 = self.up_2(mid_out_1, enc_2, t_emb)
-        # dec_1 = self.up_1(dec_2, enc_1, t_emb)
-        # dec_0 = self.up_0(dec_1, enc_0, t_emb)
+        # e.g.
+        #     dec_2 = self.up_2(mid_out_1, enc_2, t_emb)
+        #     dec_1 = self.up_1(dec_2, enc_1, t_emb)
+        #     dec_0 = self.up_0(dec_1, enc_0, t_emb)
         #------------------------------------------------------------
         tensor_in = mids[-1]
         skip_idx = -1

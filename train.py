@@ -109,17 +109,19 @@ def train(args):
     from lightning.pytorch.loggers import TensorBoardLogger
     logger = TensorBoardLogger(save_dir=os.getcwd(), name=train_config['log_dir'], default_hp_metric=False)
 
-    # Note: I tried to run in single and mixed-precision; both produced NANs.
+
     if train_config['accelerator'] == 'gpu':
+        device_ids = [int(i) for i in train_config['device_ids'].split(',')]
+        print('Using precision:', train_config['precision'], ', running on GPU(s) with device_ids:', device_ids)
         trainer = pl.Trainer(strategy='ddp', #'ddp_find_unused_parameters_true', 
                             accelerator=train_config['accelerator'], 
-                            devices=train_config['devices'], 
+                            devices=device_ids,   # the device ids
                             max_epochs=train_config['num_epochs'], 
                             logger=logger, 
                             log_every_n_steps=train_config['log_every_nsteps'], 
                             callbacks=[checkpoint_callback],
                             accumulate_grad_batches=train_config['accumulate_grad_batches'],
-                            precision="16-mixed") 
+                            precision=train_config['precision']) 
     else:
         trainer = pl.Trainer(accelerator=train_config['accelerator'], 
                             max_epochs=train_config['num_epochs'], 
